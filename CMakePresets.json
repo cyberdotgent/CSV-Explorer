@@ -1,0 +1,24 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "windows-mingw64",
+      "displayName": "Windows x64 MinGW (cross-compile)",
+      "description": "Configure wxCsv for 64-bit Windows using a MinGW cross toolchain with static wxWidgets.",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/windows-mingw64",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/mingw-x86_64.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-mingw64",
+      "displayName": "Build Windows x64 MinGW",
+      "configurePreset": "windows-mingw64",
+      "description": "Build the cross-compiled Windows executable."
+    }
+  ]
+}
