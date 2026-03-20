@@ -2,6 +2,8 @@
 
 wxCsv is a minimal cross-platform CSV file explorer built with wxWidgets.
 
+<img src="assets/wxcsv.png" alt="wxCsv icon" width="128" />
+
 ## Features
 
 - Opens CSV data in a `wxDataViewCtrl`.
@@ -17,6 +19,14 @@ wxCsv is a minimal cross-platform CSV file explorer built with wxWidgets.
 - Built-in wxWidgets find dialog for searching.
 - About dialog showing app name and version.
 - App title is `wxCsv` when no file is loaded and `wxCsv - <filename>` when a file is loaded.
+
+## Application icon
+
+`assets/wxcsv.png` is the app icon artwork used across platforms.
+
+- macOS: packaged as `wxcsv.icns` and used as the app bundle icon.
+- Windows: linked as the executable icon in `assets/wxcsv.ico`.
+- Title bars: the app uses this icon for the window title bar where supported.
 
 ## Build
 

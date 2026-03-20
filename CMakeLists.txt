@@ -92,15 +92,37 @@ else()
 endif()
 
 if(APPLE)
+    set(WXCsv_BUNDLE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/wxcsv.icns")
+    set(WXCsv_WINDOW_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/wxcsv.png")
     set_target_properties(wxCsv PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_GUI_IDENTIFIER "gent.cyber.wxCsv"
         MACOSX_BUNDLE_BUNDLE_NAME "wxCsv"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${WXCsv_VERSION}"
         MACOSX_BUNDLE_BUNDLE_VERSION "${WXCsv_VERSION}"
+        MACOSX_BUNDLE_ICON_FILE "wxcsv.icns"
+    )
+    set_source_files_properties(${WXCsv_BUNDLE_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_source_files_properties(${WXCsv_WINDOW_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    target_sources(wxCsv PRIVATE
+        ${WXCsv_BUNDLE_ICON}
+        ${WXCsv_WINDOW_ICON}
     )
 endif()
 
 if(WIN32)
     set_target_properties(wxCsv PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_sources(wxCsv PRIVATE assets/wxcsv.rc)
+endif()
+
+set(WXCsv_RUNTIME_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/wxcsv.png")
+if(WIN32 OR NOT APPLE)
+    add_custom_command(
+        TARGET wxCsv
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${WXCsv_RUNTIME_ICON}"
+                "$<TARGET_FILE_DIR:wxCsv>/wxcsv.png"
+        COMMENT "Copying runtime icon for title bar usage"
+    )
 endif()
