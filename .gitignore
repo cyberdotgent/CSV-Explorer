@@ -26,6 +26,7 @@ CTestTestfile.cmake
 *.pdb
 wxCsv
 wxCsv.exe
+*.csv
 
 # IDE / tool metadata
 .vscode/
