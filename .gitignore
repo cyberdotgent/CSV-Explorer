@@ -1,0 +1,45 @@
+# Build output directories
+build/
+build-*/
+cmake-build-*/
+out/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+Testing/
+CTestTestfile.cmake
+
+# Generated/compiled objects and binaries
+*.o
+*.obj
+*.so
+*.a
+*.lib
+*.dll
+*.dylib
+*.exe
+*.exp
+*.pdb
+wxCsv
+wxCsv.exe
+
+# IDE / tool metadata
+.vscode/
+.vs/
+.idea/
+*.swp
+*~
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build crash/debug artifacts
+core
+*.core
+*.stackdump
