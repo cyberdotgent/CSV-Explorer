@@ -4,13 +4,14 @@
 #include <wx/textfile.h>
 #include <wx/filename.h>
 #include <wx/clipbrd.h>
-#include <wx/stdpaths.h>
+#include <wx/mstream.h>
 
 #include <memory>
 #include <vector>
 #include <algorithm>
 
 #include "config.h"
+#include "wxcsv_png_data.h"
 
 namespace {
 
@@ -197,30 +198,16 @@ private:
 
     void ApplyWindowIcon() {
         wxIcon icon;
-        wxStandardPaths& paths = wxStandardPaths::Get();
+#ifdef __WXMSW__
+        SetIcon(wxICON(IDI_APP_ICON));
+        return;
+#endif
 
-        wxFileName resourceIcon(paths.GetResourcesDir(), "wxcsv.ico");
-        if (icon.LoadFile(resourceIcon.GetFullPath(), wxBITMAP_TYPE_ICO)) {
+        wxMemoryInputStream stream(assets_wxcsv_png, assets_wxcsv_png_len);
+        wxBitmap bitmap;
+        if (bitmap.LoadFile(stream, wxBITMAP_TYPE_PNG)) {
+            icon.CopyFromBitmap(bitmap);
             SetIcon(icon);
-            return;
-        }
-
-        wxFileName resourceIconPng(paths.GetResourcesDir(), "wxcsv.png");
-        if (icon.LoadFile(resourceIconPng.GetFullPath(), wxBITMAP_TYPE_PNG)) {
-            SetIcon(icon);
-            return;
-        }
-
-        wxFileName exeIcon(wxFileName(paths.GetExecutablePath()).GetPath(), "wxcsv.ico");
-        if (icon.LoadFile(exeIcon.GetFullPath(), wxBITMAP_TYPE_ICO)) {
-            SetIcon(icon);
-            return;
-        }
-
-        wxFileName exeIconPng(wxFileName(paths.GetExecutablePath()).GetPath(), "wxcsv.png");
-        if (icon.LoadFile(exeIconPng.GetFullPath(), wxBITMAP_TYPE_PNG)) {
-            SetIcon(icon);
-            return;
         }
     }
 

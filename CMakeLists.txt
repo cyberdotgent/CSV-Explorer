@@ -114,15 +114,3 @@ if(WIN32)
     set_target_properties(wxCsv PROPERTIES WIN32_EXECUTABLE TRUE)
     target_sources(wxCsv PRIVATE assets/wxcsv.rc)
 endif()
-
-set(WXCsv_RUNTIME_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/wxcsv.png")
-if(WIN32 OR NOT APPLE)
-    add_custom_command(
-        TARGET wxCsv
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${WXCsv_RUNTIME_ICON}"
-                "$<TARGET_FILE_DIR:wxCsv>/wxcsv.png"
-        COMMENT "Copying runtime icon for title bar usage"
-    )
-endif()

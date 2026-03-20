@@ -22,11 +22,11 @@ wxCsv is a minimal cross-platform CSV file explorer built with wxWidgets.
 
 ## Application icon
 
-`assets/wxcsv.png` is the app icon artwork used across platforms.
+`assets/wxcsv.png` is the source icon artwork.
 
 - macOS: packaged as `wxcsv.icns` and used as the app bundle icon.
 - Windows: linked as the executable icon in `assets/wxcsv.ico`.
-- Title bars: the app uses this icon for the window title bar where supported.
+- Runtime: the icon is embedded into the executable (`src/wxcsv_png_data.h`) and used for window title bars so no external icon file needs to be loaded at runtime.
 
 ## Build
 
