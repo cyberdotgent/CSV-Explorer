@@ -96,7 +96,7 @@ public:
     }
 
     unsigned int GetColumnCount() const override {
-        return std::max(1u, m_columnCount);
+        return m_columnCount;
     }
 
     wxString GetColumnType(unsigned int) const override {
@@ -198,9 +198,9 @@ private:
             m_dataView->DeleteColumn(m_dataView->GetColumn(0));
         }
 
-        unsigned int columns = std::max(1u, static_cast<unsigned int>(headers.size()));
-        if (headers.empty()) {
-            columns = 1;
+        const unsigned int columns = static_cast<unsigned int>(headers.size());
+        if (columns == 0) {
+            return;
         }
         for (unsigned int i = 0; i < columns; ++i) {
             auto* renderer = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_INERT);
