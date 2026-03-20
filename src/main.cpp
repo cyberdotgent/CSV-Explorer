@@ -4,6 +4,7 @@
 #include <wx/textfile.h>
 #include <wx/filename.h>
 #include <wx/clipbrd.h>
+#include <wx/stdpaths.h>
 
 #include <memory>
 #include <vector>
