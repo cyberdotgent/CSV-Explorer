@@ -206,8 +206,14 @@ private:
 
         wxMemoryInputStream stream(assets_wxcsv_png, assets_wxcsv_png_len);
         wxImage image;
-        if (image.LoadFile(stream, wxBITMAP_TYPE_PNG)) {
-            wxBitmap bitmap(image);
+        {
+            wxLogNull noLog;
+            if (!image.LoadFile(stream, wxBITMAP_TYPE_PNG) || !image.IsOk()) {
+                return;
+            }
+        }
+        wxBitmap bitmap(image);
+        if (bitmap.IsOk()) {
             icon.CopyFromBitmap(bitmap);
             SetIcon(icon);
         }
@@ -598,6 +604,8 @@ wxEND_EVENT_TABLE()
 class wxCsvApp : public wxApp {
 public:
     bool OnInit() override {
+        wxInitAllImageHandlers();
+
         wxString initialFile;
         if (argc > 1) {
             initialFile = wxString(argv[1]);
