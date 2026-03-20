@@ -5,6 +5,7 @@
 #include <wx/filename.h>
 #include <wx/clipbrd.h>
 #include <wx/mstream.h>
+#include <wx/image.h>
 
 #include <memory>
 #include <vector>
@@ -204,8 +205,9 @@ private:
 #endif
 
         wxMemoryInputStream stream(assets_wxcsv_png, assets_wxcsv_png_len);
-        wxBitmap bitmap;
-        if (bitmap.LoadFile(stream, wxBITMAP_TYPE_PNG)) {
+        wxImage image;
+        if (image.LoadFile(stream, wxBITMAP_TYPE_PNG)) {
+            wxBitmap bitmap(image);
             icon.CopyFromBitmap(bitmap);
             SetIcon(icon);
         }
