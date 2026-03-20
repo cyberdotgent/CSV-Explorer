@@ -37,9 +37,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR APPLE)
     set(wxBUILD_PRECOMP OFF CACHE BOOL "" FORCE)
     set(wxBUILD_USE_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
 
-    if(WXCsv_MINGW_CROSS)
-        set(wxUSE_WEBVIEW OFF CACHE BOOL "" FORCE)
-    endif()
+if(WXCsv_MINGW_CROSS)
+    set(wxUSE_WEBVIEW OFF CACHE BOOL "" FORCE)
+    target_link_options(wxCsv PRIVATE -static-libgcc -static-libstdc++)
+endif()
 
     if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(wxBUILD_TOOLKIT msw CACHE STRING "" FORCE)
@@ -55,21 +56,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR APPLE)
     )
     FetchContent_MakeAvailable(wxwidgets)
 
-    # Pull in wxWidgets generated CMake package if present so monolithic/static
-    # builds expose their exported component targets consistently (wx::base/core/etc).
-    set(_wxwidgets_config_candidates
-        "${wxwidgets_BINARY_DIR}/lib/wxWidgetsConfig.cmake"
-        "${wxwidgets_BINARY_DIR}/lib/cmake/wxWidgets/wxWidgetsConfig.cmake")
-    foreach(_cfg IN LISTS _wxwidgets_config_candidates)
-        if(EXISTS "${_cfg}")
-            include(${_cfg})
-            break()
-        endif()
-    endforeach()
-    unset(_wxwidgets_config_candidates)
-
     if(TARGET wx::wx)
         target_link_libraries(wxCsv PRIVATE wx::wx)
+    elseif(TARGET wx::mono)
+        target_link_libraries(wxCsv PRIVATE wx::mono)
+    elseif(TARGET wxmono)
+        target_link_libraries(wxCsv PRIVATE wxmono)
     elseif(TARGET wx::wxcore AND TARGET wx::wxbase)
         target_link_libraries(wxCsv PRIVATE wx::wxcore wx::wxbase)
     elseif(TARGET wx::core AND TARGET wx::base)
