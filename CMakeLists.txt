@@ -32,10 +32,15 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR APPLE)
     include(FetchContent)
 
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+        set(CMAKE_POLICY_VERSION_MINIMUM "3.5")
+    endif()
+
     set(wxBUILD_SHARED OFF CACHE BOOL "" FORCE)
     set(wxBUILD_MONOLITHIC ON CACHE BOOL "" FORCE)
     set(wxBUILD_PRECOMP OFF CACHE BOOL "" FORCE)
     set(wxBUILD_USE_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
+    set(wxUSE_STC OFF CACHE BOOL "" FORCE)
 
 if(WXCsv_MINGW_CROSS)
     set(wxUSE_WEBVIEW OFF CACHE BOOL "" FORCE)
@@ -52,7 +57,7 @@ endif()
 
     FetchContent_Declare(
         wxwidgets
-        URL https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2
+        URL https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.9/wxWidgets-3.2.9.tar.bz2
     )
     FetchContent_MakeAvailable(wxwidgets)
 
