@@ -54,6 +54,7 @@ configure_file(
 )
 
 add_executable(csv_explorer
+    src/about_dialog.cpp
     src/main.cpp
 )
 
