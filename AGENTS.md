@@ -9,6 +9,8 @@ Build notes:
 - Configure with CMake and build as usual:
   - `cmake -S . -B build`
   - `cmake --build build`
+- `ccache` is a required dependency for all builds and uses the shared HTTP
+  cache at `http://buildcache.cyber.gent/|layout=bazel`.
 - On macOS and Windows, wxWidgets is fetched and built from source and linked statically.
 - On Linux, build prefers installed wxWidgets via `find_package`.
 
@@ -19,4 +21,3 @@ Operational behavior:
 - About shows app name and version (`0.1` from `WXCsv_VERSION` in CMake).
 - On Windows the executable target is `WIN32` (no console window).
 - On macOS the bundle identifier is set to `gent.cyber.wxCsv`.
-

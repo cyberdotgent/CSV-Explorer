@@ -7,6 +7,30 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_program(CCACHE_PROGRAM ccache)
+if(NOT CCACHE_PROGRAM)
+    message(FATAL_ERROR "ccache is required for all builds. Install ccache and retry.")
+endif()
+
+set(CCACHE_REMOTE_STORAGE_URL "http://buildcache.cyber.gent/|layout=bazel")
+set(CCACHE_NAMESPACE "csv-explorer")
+set(_ccache_launcher
+    "${CMAKE_COMMAND}" "-E" "env"
+    "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE_URL}"
+    "CCACHE_RESHARE=true"
+    "CCACHE_NAMESPACE=${CCACHE_NAMESPACE}"
+    "CCACHE_COMPILERCHECK=content"
+    "CCACHE_BASEDIR=${CMAKE_SOURCE_DIR}"
+    "CCACHE_NOHASHDIR=true"
+    "${CCACHE_PROGRAM}"
+)
+foreach(_launcher_var
+    CMAKE_C_COMPILER_LAUNCHER
+    CMAKE_CXX_COMPILER_LAUNCHER
+    CMAKE_OBJCXX_COMPILER_LAUNCHER)
+    set(${_launcher_var} "${_ccache_launcher}" CACHE STRING "Mandatory ccache launcher" FORCE)
+endforeach()
+
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/config.h
