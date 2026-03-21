@@ -30,6 +30,9 @@ CSV Explorer is a minimal cross-platform CSV file explorer built with wxWidgets.
 
 ## Build
 
+`ccache` is a mandatory build dependency. All builds are configured to use the
+shared HTTP cache at `http://buildcache.cyber.gent/|layout=bazel`.
+
 ```bash
 cmake -S . -B build
 cmake --build build
@@ -57,6 +60,7 @@ By default, the build uses:
 
 - wxWidgets from source on **Windows** and **macOS** (static linking).
 - System wxWidgets on **Linux** when available.
+- Mandatory `ccache` compiler launchers with a shared HTTP cache backend.
 
 ## Version
 

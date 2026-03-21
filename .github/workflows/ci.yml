@@ -5,6 +5,14 @@ on:
     branches:
       - main
 
+env:
+  CCACHE_DIR: ~/.cache/ccache
+  CCACHE_REMOTE_STORAGE: "http://buildcache.cyber.gent/|layout=bazel"
+  CCACHE_RESHARE: "true"
+  CCACHE_COMPILERCHECK: content
+  CCACHE_NOHASHDIR: "true"
+  CCACHE_BASEDIR: ${{ github.workspace }}
+
 jobs:
   linux:
     name: Linux (Ubuntu)
@@ -13,6 +21,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.job }}-v1
 
       - name: Install build dependencies
         run: |
@@ -23,16 +37,25 @@ jobs:
             WX_PKG="libwxgtk3.0-gtk3-dev"
           fi
           sudo apt-get install -y \
+            ccache \
             cmake \
             make \
             g++ \
             "$WX_PKG"
+
+      - name: Prime ccache
+        run: |
+          ccache --set-config=max_size=2G
+          ccache --zero-stats
 
       - name: Configure
         run: cmake -S . -B build/linux -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build/linux --config Release
+
+      - name: Show ccache stats
+        run: ccache --show-stats
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -48,11 +71,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.job }}-v1
+
+      - name: Install ccache
+        run: brew install ccache
+
+      - name: Prime ccache
+        run: |
+          ccache --set-config=max_size=2G
+          ccache --zero-stats
+
       - name: Configure
         run: cmake -S . -B build/macos
 
       - name: Build
         run: cmake --build build/macos
+
+      - name: Show ccache stats
+        run: ccache --show-stats
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -68,21 +108,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.job }}-v1
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            ccache \
             cmake \
             make \
             g++-mingw-w64-x86-64 \
             xz-utils \
             mingw-w64
 
+      - name: Prime ccache
+        run: |
+          ccache --set-config=max_size=2G
+          ccache --zero-stats
+
       - name: Configure (MinGW preset)
         run: cmake --preset windows-mingw64 --fresh
 
       - name: Build (Windows executable)
         run: cmake --build --preset windows-mingw64 --config Release
+
+      - name: Show ccache stats
+        run: ccache --show-stats
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4

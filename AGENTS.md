@@ -9,6 +9,8 @@ Build notes:
 - Configure with CMake and build as usual:
   - `cmake -S . -B build`
   - `cmake --build build`
+- `ccache` is a required dependency for all builds and uses the shared HTTP
+  cache at `http://buildcache.cyber.gent/|layout=bazel`.
 - On macOS and Windows, wxWidgets is fetched and built from source and linked statically.
 - On Linux, build prefers installed wxWidgets via `find_package`.
 
