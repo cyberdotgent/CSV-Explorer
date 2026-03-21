@@ -16,7 +16,6 @@ Operational behavior:
 - File menu opens CSV files via built-in file dialog using CSV-first filter:
   - `CSV files (*.csv)|*.csv|All files (*.*)|*.*`
 - Edit menu supports copy and find with Find/Find Next/Find Previous.
-- About shows app name and version (`0.1` from `WXCsv_VERSION` in CMake).
+- About shows app name and version (`0.1` from `CSV_EXPLORER_VERSION` in CMake).
 - On Windows the executable target is `WIN32` (no console window).
-- On macOS the bundle identifier is set to `gent.cyber.wxCsv`.
-
+- On macOS the bundle identifier is set to `gent.cyber.csvexplorer`.

@@ -1,5 +1,4 @@
 #pragma once
 
-#define WXCsv_NAME "wxCsv"
-#define WXCsv_VERSION "0.1"
-
+#define CSV_EXPLORER_NAME "CSV Explorer"
+#define CSV_EXPLORER_VERSION "0.1"

@@ -1,8 +1,8 @@
-# wxCsv
+# CSV Explorer
 
-wxCsv is a minimal cross-platform CSV file explorer built with wxWidgets.
+CSV Explorer is a minimal cross-platform CSV file explorer built with wxWidgets.
 
-<img src="assets/wxcsv.png" alt="wxCsv icon" width="128" />
+<img src="assets/csv-explorer.png" alt="CSV Explorer icon" width="128" />
 
 ## Features
 
@@ -18,15 +18,15 @@ wxCsv is a minimal cross-platform CSV file explorer built with wxWidgets.
   - Find Previous: `Shift+Ctrl+G`  
 - Built-in wxWidgets find dialog for searching.
 - About dialog showing app name and version.
-- App title is `wxCsv` when no file is loaded and `wxCsv - <filename>` when a file is loaded.
+- App title is `CSV Explorer` when no file is loaded and `CSV Explorer - <filename>` when a file is loaded.
 
 ## Application icon
 
-`assets/wxcsv.png` is the source icon artwork.
+`assets/csv-explorer.png` is the source icon artwork.
 
-- macOS: packaged as `wxcsv.icns` and used as the app bundle icon.
-- Windows: linked as the executable icon in `assets/wxcsv.ico`.
-- Runtime: the icon is embedded into the executable (`src/wxcsv_png_data.h`) and used for window title bars so no external icon file needs to be loaded at runtime.
+- macOS: packaged as `csv-explorer.icns` and used as the app bundle icon.
+- Windows: linked as the executable icon in `assets/csv-explorer.ico`.
+- Runtime: the icon is embedded into the executable (`src/csv_explorer_png_data.h`) and used for window title bars so no external icon file needs to be loaded at runtime.
 
 ## Build
 
@@ -63,7 +63,11 @@ By default, the build uses:
 The version string is maintained in `CMakeLists.txt` as:
 
 ```cmake
-set(WXCsv_VERSION "0.1")
+set(CSV_EXPLORER_VERSION "0.1")
 ```
 
 `config.h` is generated at configure time from this value.
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE`.

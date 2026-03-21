@@ -12,7 +12,7 @@
 #include <algorithm>
 
 #include "config.h"
-#include "wxcsv_png_data.h"
+#include "csv_explorer_png_data.h"
 
 namespace {
 
@@ -133,7 +133,7 @@ private:
 class MainFrame : public wxFrame {
 public:
     MainFrame(const wxString& initialFile)
-        : wxFrame(nullptr, wxID_ANY, WXCsv_NAME, wxDefaultPosition, wxSize(900, 600)) {
+        : wxFrame(nullptr, wxID_ANY, CSV_EXPLORER_NAME, wxDefaultPosition, wxSize(900, 600)) {
         BuildMenuBar();
         BuildAccelerators();
         BuildDataView();
@@ -204,7 +204,7 @@ private:
         return;
 #endif
 
-        wxMemoryInputStream stream(assets_wxcsv_png, assets_wxcsv_png_len);
+        wxMemoryInputStream stream(assets_csv_explorer_png, assets_csv_explorer_png_len);
         wxImage image;
         {
             wxLogNull noLog;
@@ -246,9 +246,9 @@ private:
 
     void UpdateTitle() {
         if (m_currentFile.IsEmpty()) {
-            SetTitle(WXCsv_NAME);
+            SetTitle(CSV_EXPLORER_NAME);
         } else {
-            SetTitle(wxString::Format("%s - %s", WXCsv_NAME, wxFileName(m_currentFile).GetFullName()));
+            SetTitle(wxString::Format("%s - %s", CSV_EXPLORER_NAME, wxFileName(m_currentFile).GetFullName()));
         }
     }
 
@@ -551,8 +551,8 @@ private:
 
     void OnAbout(wxCommandEvent&) {
         wxMessageBox(
-            wxString::Format("%s %s", WXCsv_NAME, WXCsv_VERSION),
-            "About wxCsv",
+            wxString::Format("%s %s", CSV_EXPLORER_NAME, CSV_EXPLORER_VERSION),
+            "About CSV Explorer",
             wxOK | wxICON_INFORMATION,
             this);
     }
@@ -601,7 +601,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_FIND_CLOSE(wxID_ANY, MainFrame::OnFindDialogClose)
 wxEND_EVENT_TABLE()
 
-class wxCsvApp : public wxApp {
+class CsvExplorerApp : public wxApp {
 public:
     bool OnInit() override {
         wxInitAllImageHandlers();
@@ -616,4 +616,4 @@ public:
     }
 };
 
-wxIMPLEMENT_APP(wxCsvApp);
+wxIMPLEMENT_APP(CsvExplorerApp);
