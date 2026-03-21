@@ -67,7 +67,7 @@ By default, the build uses:
 The version string is maintained in `CMakeLists.txt` as:
 
 ```cmake
-set(CSV_EXPLORER_VERSION "0.1")
+set(CSV_EXPLORER_VERSION "0.2")
 ```
 
 `config.h` is generated at configure time from this value.
