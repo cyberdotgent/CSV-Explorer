@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(wxCsv VERSION 0.1.0 LANGUAGES CXX)
+project(CSVExplorer VERSION 0.1.0 LANGUAGES CXX)
 
-set(WXCsv_VERSION "0.1")
+set(CSV_EXPLORER_VERSION "0.1")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -35,20 +35,24 @@ configure_file(
     @ONLY
 )
 
-add_executable(wxCsv
+add_executable(csv_explorer
     src/main.cpp
 )
 
-target_include_directories(wxCsv
+set_target_properties(csv_explorer PROPERTIES
+    OUTPUT_NAME "csv-explorer"
+)
+
+target_include_directories(csv_explorer
     PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-set(WXCsv_MINGW_CROSS FALSE)
+set(CSV_EXPLORER_MINGW_CROSS FALSE)
 if(CMAKE_CROSSCOMPILING
     AND CMAKE_SYSTEM_NAME STREQUAL "Windows"
     AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(WXCsv_MINGW_CROSS TRUE)
+    set(CSV_EXPLORER_MINGW_CROSS TRUE)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR APPLE)
@@ -64,9 +68,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR APPLE)
     set(wxBUILD_USE_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
     set(wxUSE_STC OFF CACHE BOOL "" FORCE)
 
-if(WXCsv_MINGW_CROSS)
+if(CSV_EXPLORER_MINGW_CROSS)
     set(wxUSE_WEBVIEW OFF CACHE BOOL "" FORCE)
-    target_link_options(wxCsv PRIVATE -static-libgcc -static-libstdc++)
+    target_link_options(csv_explorer PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
     if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -84,30 +88,30 @@ endif()
     FetchContent_MakeAvailable(wxwidgets)
 
     if(TARGET wx::wx)
-        target_link_libraries(wxCsv PRIVATE wx::wx)
+        target_link_libraries(csv_explorer PRIVATE wx::wx)
     elseif(TARGET wx::mono)
-        target_link_libraries(wxCsv PRIVATE wx::mono)
+        target_link_libraries(csv_explorer PRIVATE wx::mono)
     elseif(TARGET wxmono)
-        target_link_libraries(wxCsv PRIVATE wxmono)
+        target_link_libraries(csv_explorer PRIVATE wxmono)
     elseif(TARGET wx::wxcore AND TARGET wx::wxbase)
-        target_link_libraries(wxCsv PRIVATE wx::wxcore wx::wxbase)
+        target_link_libraries(csv_explorer PRIVATE wx::wxcore wx::wxbase)
     elseif(TARGET wx::core AND TARGET wx::base)
         set(_wx_widgets_targets wx::base wx::core)
         if(TARGET wx::adv)
             list(APPEND _wx_widgets_targets wx::adv)
         endif()
         if(TARGET wxWidgets::wxWidgets)
-            target_link_libraries(wxCsv PRIVATE wxWidgets::wxWidgets)
+            target_link_libraries(csv_explorer PRIVATE wxWidgets::wxWidgets)
         else()
-            target_link_libraries(wxCsv PRIVATE ${_wx_widgets_targets})
+            target_link_libraries(csv_explorer PRIVATE ${_wx_widgets_targets})
         endif()
     elseif(TARGET wxWidgets::wxWidgets)
-        target_link_libraries(wxCsv PRIVATE wxWidgets::wxWidgets)
+        target_link_libraries(csv_explorer PRIVATE wxWidgets::wxWidgets)
     else()
         # As a final fallback, use the FindwxWidgets-compatible variables generated
         # by wxWidgetsConfig.cmake if available.
         if(wxWidgets_LIBRARIES)
-            target_link_libraries(wxCsv PRIVATE ${wxWidgets_LIBRARIES})
+            target_link_libraries(csv_explorer PRIVATE ${wxWidgets_LIBRARIES})
         else()
         message(FATAL_ERROR "Unable to find wxWidgets CMake targets after FetchContent.")
         endif()
@@ -115,29 +119,29 @@ endif()
 else()
     find_package(wxWidgets REQUIRED COMPONENTS core base adv)
     include(${wxWidgets_USE_FILE})
-    target_link_libraries(wxCsv PRIVATE ${wxWidgets_LIBRARIES})
+    target_link_libraries(csv_explorer PRIVATE ${wxWidgets_LIBRARIES})
 endif()
 
 if(APPLE)
-    set(WXCsv_BUNDLE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/wxcsv.icns")
-    set(WXCsv_WINDOW_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/wxcsv.png")
-    set_target_properties(wxCsv PROPERTIES
+    set(CSV_EXPLORER_BUNDLE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/csv-explorer.icns")
+    set(CSV_EXPLORER_WINDOW_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/csv-explorer.png")
+    set_target_properties(csv_explorer PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_GUI_IDENTIFIER "gent.cyber.wxCsv"
-        MACOSX_BUNDLE_BUNDLE_NAME "wxCsv"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "${WXCsv_VERSION}"
-        MACOSX_BUNDLE_BUNDLE_VERSION "${WXCsv_VERSION}"
-        MACOSX_BUNDLE_ICON_FILE "wxcsv.icns"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "gent.cyber.csvexplorer"
+        MACOSX_BUNDLE_BUNDLE_NAME "CSV Explorer"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${CSV_EXPLORER_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${CSV_EXPLORER_VERSION}"
+        MACOSX_BUNDLE_ICON_FILE "csv-explorer.icns"
     )
-    set_source_files_properties(${WXCsv_BUNDLE_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    set_source_files_properties(${WXCsv_WINDOW_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    target_sources(wxCsv PRIVATE
-        ${WXCsv_BUNDLE_ICON}
-        ${WXCsv_WINDOW_ICON}
+    set_source_files_properties(${CSV_EXPLORER_BUNDLE_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_source_files_properties(${CSV_EXPLORER_WINDOW_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    target_sources(csv_explorer PRIVATE
+        ${CSV_EXPLORER_BUNDLE_ICON}
+        ${CSV_EXPLORER_WINDOW_ICON}
     )
 endif()
 
 if(WIN32)
-    set_target_properties(wxCsv PROPERTIES WIN32_EXECUTABLE TRUE)
-    target_sources(wxCsv PRIVATE assets/wxcsv.rc)
+    set_target_properties(csv_explorer PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_sources(csv_explorer PRIVATE assets/csv-explorer.rc)
 endif()

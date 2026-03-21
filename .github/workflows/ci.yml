@@ -60,8 +60,8 @@ jobs:
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wxcsv-linux
-          path: build/linux/wxCsv
+          name: csv-explorer-linux
+          path: build/linux/csv-explorer
 
   macos:
     name: macOS
@@ -142,8 +142,8 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wxcsv-windows
-          path: build/windows-mingw64/wxCsv.exe
+          name: csv-explorer-windows
+          path: build/windows-mingw64/csv-explorer.exe
 
   release-windows:
     name: Publish Windows binary on tag
@@ -156,10 +156,10 @@ jobs:
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: wxcsv-windows
+          name: csv-explorer-windows
           path: dist
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/wxCsv.exe
+          files: dist/csv-explorer.exe
