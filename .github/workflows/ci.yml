@@ -9,7 +9,6 @@ env:
   CCACHE_DIR: ~/.cache/ccache
   CCACHE_REMOTE_STORAGE: "http://buildcache.cyber.gent/|layout=bazel"
   CCACHE_RESHARE: "true"
-  CCACHE_NAMESPACE: csv-explorer
   CCACHE_COMPILERCHECK: content
   CCACHE_NOHASHDIR: "true"
   CCACHE_BASEDIR: ${{ github.workspace }}

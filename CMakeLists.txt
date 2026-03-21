@@ -13,12 +13,10 @@ if(NOT CCACHE_PROGRAM)
 endif()
 
 set(CCACHE_REMOTE_STORAGE_URL "http://buildcache.cyber.gent/|layout=bazel")
-set(CCACHE_NAMESPACE "csv-explorer")
 set(_ccache_launcher
     "${CMAKE_COMMAND}" "-E" "env"
     "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE_URL}"
     "CCACHE_RESHARE=true"
-    "CCACHE_NAMESPACE=${CCACHE_NAMESPACE}"
     "CCACHE_COMPILERCHECK=content"
     "CCACHE_BASEDIR=${CMAKE_SOURCE_DIR}"
     "CCACHE_NOHASHDIR=true"
