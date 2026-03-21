@@ -40,6 +40,26 @@ jobs:
           name: wxcsv-linux
           path: build/linux/wxCsv
 
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build/macos
+
+      - name: Build
+        run: cmake --build build/macos
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wxcsv-macos
+          path: build/macos/wxCsv.app
+
   windows-mingw:
     name: Windows (MinGW cross, Ubuntu container)
     runs-on: ubuntu-latest
