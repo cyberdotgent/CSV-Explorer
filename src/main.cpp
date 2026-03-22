@@ -4,15 +4,13 @@
 #include <wx/textfile.h>
 #include <wx/filename.h>
 #include <wx/clipbrd.h>
-#include <wx/mstream.h>
-#include <wx/image.h>
 
 #include <memory>
 #include <vector>
 #include <algorithm>
 
+#include "about_dialog.h"
 #include "config.h"
-#include "csv_explorer_png_data.h"
 
 namespace {
 
@@ -198,23 +196,13 @@ private:
     }
 
     void ApplyWindowIcon() {
-        wxIcon icon;
 #ifdef __WXMSW__
         SetIcon(wxICON(IDI_APP_ICON));
         return;
 #endif
 
-        wxMemoryInputStream stream(assets_csv_explorer_png, assets_csv_explorer_png_len);
-        wxImage image;
-        {
-            wxLogNull noLog;
-            if (!image.LoadFile(stream, wxBITMAP_TYPE_PNG) || !image.IsOk()) {
-                return;
-            }
-        }
-        wxBitmap bitmap(image);
-        if (bitmap.IsOk()) {
-            icon.CopyFromBitmap(bitmap);
+        wxIcon icon = LoadAppIcon();
+        if (icon.IsOk()) {
             SetIcon(icon);
         }
     }
@@ -550,11 +538,7 @@ private:
     }
 
     void OnAbout(wxCommandEvent&) {
-        wxMessageBox(
-            wxString::Format("%s %s", CSV_EXPLORER_NAME, CSV_EXPLORER_VERSION),
-            "About CSV Explorer",
-            wxOK | wxICON_INFORMATION,
-            this);
+        ShowAboutDialog(this);
     }
 
     void OnClose(wxCloseEvent& event) {

@@ -1,11 +1,29 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(CSVExplorer VERSION 0.1.0 LANGUAGES CXX)
+project(CSVExplorer VERSION 0.2.0 LANGUAGES CXX)
 
-set(CSV_EXPLORER_VERSION "0.1")
+set(CSV_EXPLORER_VERSION "0.2")
+set(CSV_EXPLORER_LICENSE "MIT")
+set(CSV_EXPLORER_AUTHOR "Yvan Janssens")
+set(CSV_EXPLORER_REPOSITORY_URL "https://github.com/cyberdotgent/CSV-Explorer")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(Git QUIET)
+set(CSV_EXPLORER_GIT_COMMIT_SHORT "unknown")
+if(GIT_FOUND)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" rev-parse --short HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE CSV_EXPLORER_GIT_COMMIT_SHORT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+endif()
+if(CSV_EXPLORER_GIT_COMMIT_SHORT STREQUAL "")
+    set(CSV_EXPLORER_GIT_COMMIT_SHORT "unknown")
+endif()
 
 find_program(CCACHE_PROGRAM ccache)
 if(NOT CCACHE_PROGRAM)
@@ -36,6 +54,7 @@ configure_file(
 )
 
 add_executable(csv_explorer
+    src/about_dialog.cpp
     src/main.cpp
 )
 
