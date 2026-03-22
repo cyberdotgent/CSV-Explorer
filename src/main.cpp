@@ -3,6 +3,7 @@
 #include <wx/textfile.h>
 #include <wx/filename.h>
 #include <wx/clipbrd.h>
+#include <wx/ffile.h>
 #include <wx/grid.h>
 
 #include <algorithm>
@@ -82,6 +83,39 @@ bool ContainsText(const wxString& source, const wxString& target, bool matchCase
     return source.Lower().Find(target.Lower()) != wxNOT_FOUND;
 }
 
+wxString EscapeCsvField(const wxString& value) {
+    bool needsQuotes = false;
+    wxString escaped;
+
+    for (const wxUniChar ch : value) {
+        if (ch == '"') {
+            escaped += "\"\"";
+            needsQuotes = true;
+        } else {
+            if (ch == ',' || ch == '\n' || ch == '\r') {
+                needsQuotes = true;
+            }
+            escaped += ch;
+        }
+    }
+
+    if (needsQuotes) {
+        return "\"" + escaped + "\"";
+    }
+    return escaped;
+}
+
+wxString BuildCsvLine(const std::vector<wxString>& fields) {
+    wxString line;
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (i > 0) {
+            line += ',';
+        }
+        line += EscapeCsvField(fields[i]);
+    }
+    return line;
+}
+
 } // namespace
 
 class MainFrame : public wxFrame {
@@ -103,6 +137,9 @@ private:
     void BuildMenuBar() {
         auto* fileMenu = new wxMenu();
         fileMenu->Append(wxID_OPEN, "&Open...\tCtrl+O");
+        fileMenu->Append(wxID_SAVE, "&Save\tCtrl+S");
+        fileMenu->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
+        fileMenu->AppendSeparator();
         fileMenu->Append(wxID_EXIT, "E&xit\tCtrl+Q");
 
         auto* editMenu = new wxMenu();
@@ -132,6 +169,7 @@ private:
         m_grid->Bind(wxEVT_GRID_CELL_LEFT_DCLICK, &MainFrame::OnCellLeftDClick, this);
         m_grid->Bind(wxEVT_GRID_CELL_RIGHT_CLICK, &MainFrame::OnCellRightClick, this);
         m_grid->Bind(wxEVT_GRID_SELECT_CELL, &MainFrame::OnSelectCell, this);
+        m_grid->Bind(wxEVT_GRID_CELL_CHANGED, &MainFrame::OnCellChanged, this);
         m_grid->Bind(wxEVT_GRID_EDITOR_SHOWN, &MainFrame::OnEditorShown, this);
         m_grid->Bind(wxEVT_CHAR_HOOK, &MainFrame::OnGridCharHook, this);
 
@@ -150,6 +188,8 @@ private:
     void BuildAccelerators() {
         wxAcceleratorEntry entries[] = {
             { wxACCEL_CTRL, 'O', wxID_OPEN },
+            { wxACCEL_CTRL, 'S', wxID_SAVE },
+            { wxACCEL_CTRL | wxACCEL_SHIFT, 'S', wxID_SAVEAS },
             { wxACCEL_CTRL, 'Q', wxID_EXIT },
             { wxACCEL_CTRL, 'C', wxID_COPY },
             { wxACCEL_CTRL, 'F', wxID_FIND },
@@ -229,6 +269,7 @@ private:
     void RefreshGridFromData() {
         const int rows = static_cast<int>(m_rows.size());
         const int columns = static_cast<int>(GetColumnCount());
+        m_isRefreshingGrid = true;
 
         EnsureColumnCount(columns);
         EnsureRowCount(rows);
@@ -246,14 +287,25 @@ private:
                 m_grid->SetCellValue(row, col, GetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(col)));
             }
         }
+
+        m_isRefreshingGrid = false;
     }
 
     void UpdateTitle() {
+        wxString title = CSV_EXPLORER_NAME;
         if (m_currentFile.IsEmpty()) {
-            SetTitle(CSV_EXPLORER_NAME);
-        } else {
-            SetTitle(wxString::Format("%s - %s", CSV_EXPLORER_NAME, wxFileName(m_currentFile).GetFullName()));
+            if (m_isDirty) {
+                title += " *";
+            }
+            SetTitle(title);
+            return;
         }
+
+        title = wxString::Format("%s - %s", CSV_EXPLORER_NAME, wxFileName(m_currentFile).GetFullName());
+        if (m_isDirty) {
+            title += " *";
+        }
+        SetTitle(title);
     }
 
     void UpdateStatusBar() {
@@ -267,8 +319,84 @@ private:
             "Row %d of %d",
             totalRows > 0 && selectedRow >= 0 ? selectedRow + 1 : 0,
             totalRows);
-        SetStatusText({}, 0);
+        SetStatusText(m_isDirty ? "Modified" : wxString(), 0);
         SetStatusText(status, 1);
+    }
+
+    void SetDirty(bool dirty) {
+        if (m_isDirty == dirty) {
+            return;
+        }
+
+        m_isDirty = dirty;
+        UpdateTitle();
+        UpdateStatusBar();
+    }
+
+    void SyncCellFromGrid(int row, int col) {
+        if (row < 0 || col < 0 || row >= static_cast<int>(m_rows.size())) {
+            return;
+        }
+
+        const wxString updatedValue = m_grid->GetCellValue(row, col);
+        if (GetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(col)) == updatedValue) {
+            return;
+        }
+
+        SetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(col), updatedValue);
+        SetDirty(true);
+    }
+
+    bool SaveToPath(const wxString& path) {
+        CommitActiveEdit();
+
+        wxFFile file(path, "w");
+        if (!file.IsOpened()) {
+            wxMessageBox(wxString::Format("Unable to write file:\n%s", path), "Save CSV");
+            return false;
+        }
+
+        std::vector<wxString> headers = m_headers;
+        headers.resize(GetColumnCount());
+        if (!file.Write(BuildCsvLine(headers) + "\n")) {
+            wxMessageBox(wxString::Format("Unable to write file:\n%s", path), "Save CSV");
+            return false;
+        }
+
+        for (const auto& row : m_rows) {
+            std::vector<wxString> normalizedRow = row;
+            normalizedRow.resize(GetColumnCount());
+            if (!file.Write(BuildCsvLine(normalizedRow) + "\n")) {
+                wxMessageBox(wxString::Format("Unable to write file:\n%s", path), "Save CSV");
+                return false;
+            }
+        }
+
+        m_currentFile = path;
+        SetDirty(false);
+        UpdateTitle();
+        return true;
+    }
+
+    bool SaveCurrentFile() {
+        if (m_currentFile.IsEmpty()) {
+            return SaveCurrentFileAs();
+        }
+        return SaveToPath(m_currentFile);
+    }
+
+    bool SaveCurrentFileAs() {
+        wxFileDialog dialog(
+            this,
+            "Save CSV file",
+            {},
+            m_currentFile.IsEmpty() ? "data.csv" : wxFileName(m_currentFile).GetFullName(),
+            "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+            wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+        if (dialog.ShowModal() != wxID_OK) {
+            return false;
+        }
+        return SaveToPath(dialog.GetPath());
     }
 
     void OpenFile(const wxString& path) {
@@ -292,6 +420,7 @@ private:
         m_currentFile = path;
         m_lastFindValid = false;
         m_lastFindIndex = 0;
+        SetDirty(false);
         UpdateTitle();
         UpdateStatusBar();
         ResizeToCsvContent();
@@ -565,6 +694,14 @@ private:
         Close();
     }
 
+    void OnSave(wxCommandEvent&) {
+        SaveCurrentFile();
+    }
+
+    void OnSaveAs(wxCommandEvent&) {
+        SaveCurrentFileAs();
+    }
+
     void OnCopy(wxCommandEvent&) {
         CopySelection();
     }
@@ -636,6 +773,13 @@ private:
         event.Skip();
     }
 
+    void OnCellChanged(wxGridEvent& event) {
+        if (!m_isRefreshingGrid) {
+            SyncCellFromGrid(event.GetRow(), event.GetCol());
+        }
+        event.Skip();
+    }
+
     void OnSelectCell(wxGridEvent& event) {
         event.Skip();
         UpdateStatusBar();
@@ -679,6 +823,8 @@ private:
     wxFindReplaceDialog* m_findDialog{nullptr};
     size_t m_lastFindIndex{0};
     bool m_lastFindValid{false};
+    bool m_isDirty{false};
+    bool m_isRefreshingGrid{false};
     int m_contextRow{-1};
     int m_contextColumn{-1};
 
@@ -687,6 +833,8 @@ private:
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_OPEN, MainFrame::OnOpen)
+    EVT_MENU(wxID_SAVE, MainFrame::OnSave)
+    EVT_MENU(wxID_SAVEAS, MainFrame::OnSaveAs)
     EVT_MENU(wxID_EXIT, MainFrame::OnExit)
     EVT_MENU(wxID_COPY, MainFrame::OnCopy)
     EVT_MENU(wxID_FIND, MainFrame::OnFind)
