@@ -75,6 +75,14 @@ set_target_properties(csv_explorer PROPERTIES
     OUTPUT_NAME "csv-explorer"
 )
 
+if((APPLE OR WIN32) AND CMAKE_STRIP)
+    add_custom_command(
+        TARGET csv_explorer POST_BUILD
+        COMMAND "${CMAKE_STRIP}" "$<TARGET_FILE:csv_explorer>"
+        COMMENT "Stripping csv-explorer binary"
+    )
+endif()
+
 target_include_directories(csv_explorer
     PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
