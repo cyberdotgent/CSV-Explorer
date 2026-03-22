@@ -584,23 +584,23 @@ public:
 
         auto* mappingSizer = new wxFlexGridSizer(3, FromDIP(8), FromDIP(12));
         mappingSizer->AddGrowableCol(1, 1);
-        mappingSizer->Add(new wxStaticText(this, wxID_ANY, "Column"), 0, wxALIGN_CENTER_VERTICAL);
-        mappingSizer->Add(new wxStaticText(this, wxID_ANY, "Field name"), 0, wxALIGN_CENTER_VERTICAL);
-        mappingSizer->Add(new wxStaticText(this, wxID_ANY, "SQLite type"), 0, wxALIGN_CENTER_VERTICAL);
+        mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, "Column"), 0, wxALIGN_CENTER_VERTICAL);
+        mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, "Field name"), 0, wxALIGN_CENTER_VERTICAL);
+        mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, "SQLite type"), 0, wxALIGN_CENTER_VERTICAL);
 
-        mappingSizer->Add(new wxStaticText(this, wxID_ANY, "ID"), 0, wxALIGN_CENTER_VERTICAL);
-        mappingSizer->Add(new wxStaticText(this, wxID_ANY, "ID"), 0, wxALIGN_CENTER_VERTICAL);
-        mappingSizer->Add(new wxStaticText(this, wxID_ANY, "INTEGER PRIMARY KEY AUTOINCREMENT"), 0, wxALIGN_CENTER_VERTICAL);
+        mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, "ID"), 0, wxALIGN_CENTER_VERTICAL);
+        mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, "ID"), 0, wxALIGN_CENTER_VERTICAL);
+        mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, "INTEGER PRIMARY KEY AUTOINCREMENT"), 0, wxALIGN_CENTER_VERTICAL);
 
         static const wxString typeChoices[] = { "TEXT", "INTEGER", "REAL", "NUMERIC", "BLOB" };
         for (size_t i = 0; i < m_columnNames.size(); ++i) {
             const wxString originalLabel = i < m_table.headers.size() && !m_table.headers[i].IsEmpty()
                 ? m_table.headers[i]
                 : wxString::Format("Column %zu", i + 1);
-            mappingSizer->Add(new wxStaticText(this, wxID_ANY, originalLabel), 0, wxALIGN_CENTER_VERTICAL);
-            mappingSizer->Add(new wxStaticText(this, wxID_ANY, m_columnNames[i]), 0, wxALIGN_CENTER_VERTICAL);
+            mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, originalLabel), 0, wxALIGN_CENTER_VERTICAL);
+            mappingSizer->Add(new wxStaticText(mappingPanel, wxID_ANY, m_columnNames[i]), 0, wxALIGN_CENTER_VERTICAL);
 
-            auto* choice = new wxChoice(this, wxID_ANY);
+            auto* choice = new wxChoice(mappingPanel, wxID_ANY);
             for (const wxString& typeChoice : typeChoices) {
                 choice->Append(typeChoice);
             }
