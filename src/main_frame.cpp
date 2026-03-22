@@ -5,7 +5,7 @@
 #include <wx/ffile.h>
 #include <wx/filename.h>
 #include <wx/grid.h>
-#include <wx/notebook.h>
+#include <wx/aui/auibook.h>
 #ifdef __WXOSX__
 #include <wx/osx/menu.h>
 #endif
@@ -198,11 +198,12 @@ private:
     void OnFindNext(wxCommandEvent&);
     void OnFindPrevious(wxCommandEvent&);
     void OnAbout(wxCommandEvent&);
-    void OnNotebookPageChanged(wxBookCtrlEvent&);
+    void OnNotebookPageChanged(wxAuiNotebookEvent&);
+    void OnNotebookPageClose(wxAuiNotebookEvent&);
     void OnActivate(wxActivateEvent&);
     void OnClose(wxCloseEvent&);
 
-    wxNotebook* m_notebook{nullptr};
+    wxAuiNotebook* m_notebook{nullptr};
 };
 
 class EditorPage : public wxPanel {
@@ -461,7 +462,12 @@ void MainFrame::BuildAccelerators() {
 }
 
 void MainFrame::BuildNotebook() {
-    m_notebook = new wxNotebook(this, wxID_ANY);
+    const long notebookStyle =
+        wxAUI_NB_TOP |
+        wxAUI_NB_TAB_MOVE |
+        wxAUI_NB_SCROLL_BUTTONS |
+        wxAUI_NB_CLOSE_ON_ALL_TABS;
+    m_notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, notebookStyle);
 
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(m_notebook, 1, wxEXPAND | wxALL, 0);
@@ -485,7 +491,8 @@ void MainFrame::BuildNotebook() {
     Bind(wxEVT_MENU, &MainFrame::OnFindNext, this, ID_FIND_NEXT);
     Bind(wxEVT_MENU, &MainFrame::OnFindPrevious, this, ID_FIND_PREVIOUS);
     Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
-    Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, &MainFrame::OnNotebookPageChanged, this);
+    Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, &MainFrame::OnNotebookPageChanged, this);
+    Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSE, &MainFrame::OnNotebookPageClose, this);
     Bind(wxEVT_ACTIVATE, &MainFrame::OnActivate, this);
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnClose, this);
 }
@@ -754,13 +761,37 @@ void MainFrame::OnAbout(wxCommandEvent&) {
     ShowAboutDialog(this);
 }
 
-void MainFrame::OnNotebookPageChanged(wxBookCtrlEvent& event) {
+void MainFrame::OnNotebookPageChanged(wxAuiNotebookEvent& event) {
     UpdateFrameTitle();
     UpdateStatusBar();
     if (EditorPage* page = GetActivePage()) {
         page->FocusEditor();
     }
     event.Skip();
+}
+
+void MainFrame::OnNotebookPageClose(wxAuiNotebookEvent& event) {
+    const int selection = event.GetSelection();
+    if (!m_notebook || selection == wxNOT_FOUND) {
+        event.Veto();
+        return;
+    }
+
+    auto* page = dynamic_cast<EditorPage*>(m_notebook->GetPage(static_cast<size_t>(selection)));
+    if (!page) {
+        event.Veto();
+        return;
+    }
+
+    if (!page->ConfirmClose()) {
+        event.Veto();
+        return;
+    }
+
+    if (m_notebook->GetPageCount() <= 1) {
+        event.Veto();
+        Close();
+    }
 }
 
 void MainFrame::OnActivate(wxActivateEvent& event) {
