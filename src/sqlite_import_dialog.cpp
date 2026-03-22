@@ -9,6 +9,7 @@
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
 #include <wx/progdlg.h>
+#include <wx/scrolwin.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/string.h>
@@ -576,6 +577,11 @@ public:
         auto* mappingLabel = new wxStaticText(this, wxID_ANY, "Column types");
         topSizer->Add(mappingLabel, 0, wxLEFT | wxRIGHT, FromDIP(12));
 
+        auto* mappingPanel = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxBORDER_THEME);
+        mappingPanel->SetScrollRate(0, FromDIP(16));
+        mappingPanel->SetMinSize(FromDIP(wxSize(-1, 260)));
+        mappingPanel->SetMaxSize(FromDIP(wxSize(-1, 260)));
+
         auto* mappingSizer = new wxFlexGridSizer(3, FromDIP(8), FromDIP(12));
         mappingSizer->AddGrowableCol(1, 1);
         mappingSizer->Add(new wxStaticText(this, wxID_ANY, "Column"), 0, wxALIGN_CENTER_VERTICAL);
@@ -602,7 +608,11 @@ public:
             m_typeChoices.push_back(choice);
             mappingSizer->Add(choice, 0, wxEXPAND);
         }
-        topSizer->Add(mappingSizer, 0, wxEXPAND | wxALL, FromDIP(12));
+        auto* mappingPanelSizer = new wxBoxSizer(wxVERTICAL);
+        mappingPanelSizer->Add(mappingSizer, 0, wxEXPAND | wxALL, FromDIP(12));
+        mappingPanel->SetSizer(mappingPanelSizer);
+        mappingPanel->FitInside();
+        topSizer->Add(mappingPanel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(12));
 
         m_statusLabel = new wxStaticText(this, wxID_ANY, wxString::Format("%zu rows will be exported.", m_table.rows.size()));
         topSizer->Add(m_statusLabel, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(12));
