@@ -12,12 +12,16 @@
 
 #include "about_dialog.h"
 #include "config.h"
+#include "go_to_row_dialog.h"
 
 namespace {
 
 enum {
     ID_FIND_NEXT = wxID_HIGHEST + 1,
     ID_FIND_PREVIOUS,
+    ID_GO_TO_FIRST,
+    ID_GO_TO_LAST,
+    ID_GO_TO_ROW,
     ID_CONTEXT_COPY_ROW,
     ID_CONTEXT_COPY_CELL,
     ID_INSERT_ROW_BEFORE,
@@ -155,6 +159,12 @@ private:
         insertMenu->Append(ID_INSERT_COLUMN_BEFORE, "Insert column &before");
         insertMenu->Append(ID_INSERT_COLUMN_AFTER, "Insert column &after");
         editMenu->AppendSubMenu(insertMenu, "&Insert");
+        editMenu->AppendSeparator();
+        auto* goToMenu = new wxMenu();
+        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First");
+        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last");
+        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...");
+        editMenu->AppendSubMenu(goToMenu, "&Go To");
         editMenu->AppendSeparator();
         editMenu->Append(wxID_FIND, "&Find...\tCtrl+F");
         editMenu->Append(ID_FIND_NEXT, "Find &Next\tCtrl+G");
@@ -376,6 +386,23 @@ private:
             return m_contextColumn;
         }
         return m_grid ? m_grid->GetGridCursorCol() : -1;
+    }
+
+    void GoToRow(int row) {
+        if (!m_grid || m_rows.empty()) {
+            return;
+        }
+
+        row = std::clamp(row, 0, static_cast<int>(m_rows.size()) - 1);
+        int col = m_grid->GetGridCursorCol();
+        if (col < 0) {
+            col = 0;
+        }
+        if (m_grid->GetNumberCols() <= 0) {
+            return;
+        }
+        col = std::clamp(col, 0, m_grid->GetNumberCols() - 1);
+        SelectCell(static_cast<unsigned int>(row), static_cast<unsigned int>(col));
     }
 
     wxRect GetHeaderRect(int col) const {
@@ -898,6 +925,28 @@ private:
         CopySelection();
     }
 
+    void OnGoToFirst(wxCommandEvent&) {
+        GoToRow(0);
+    }
+
+    void OnGoToLast(wxCommandEvent&) {
+        if (!m_rows.empty()) {
+            GoToRow(static_cast<int>(m_rows.size()) - 1);
+        }
+    }
+
+    void OnGoToRow(wxCommandEvent&) {
+        if (m_rows.empty()) {
+            return;
+        }
+
+        int selectedRow = -1;
+        const int currentRow = std::max(0, m_grid->GetGridCursorRow());
+        if (ShowGoToRowDialog(this, static_cast<int>(m_rows.size()), currentRow, &selectedRow)) {
+            GoToRow(selectedRow);
+        }
+    }
+
     void OnFind(wxCommandEvent&) {
         if (!m_findDialog) {
             m_findDialog = new wxFindReplaceDialog(this, &m_findData, "Find");
@@ -1084,6 +1133,9 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_SAVEAS, MainFrame::OnSaveAs)
     EVT_MENU(wxID_EXIT, MainFrame::OnExit)
     EVT_MENU(wxID_COPY, MainFrame::OnCopy)
+    EVT_MENU(ID_GO_TO_FIRST, MainFrame::OnGoToFirst)
+    EVT_MENU(ID_GO_TO_LAST, MainFrame::OnGoToLast)
+    EVT_MENU(ID_GO_TO_ROW, MainFrame::OnGoToRow)
     EVT_MENU(wxID_FIND, MainFrame::OnFind)
     EVT_MENU(ID_FIND_NEXT, MainFrame::OnFindNext)
     EVT_MENU(ID_FIND_PREVIOUS, MainFrame::OnFindPrevious)

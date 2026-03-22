@@ -55,6 +55,7 @@ configure_file(
 
 add_executable(csv_explorer
     src/about_dialog.cpp
+    src/go_to_row_dialog.cpp
     src/main.cpp
 )
 
