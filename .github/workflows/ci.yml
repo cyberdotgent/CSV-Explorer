@@ -45,7 +45,7 @@ jobs:
           sudo apt-get install -y \
             ccache \
             cmake \
-            make \
+            ninja-build \
             g++ \
             "$WX_PKG"
 
@@ -55,7 +55,7 @@ jobs:
           ccache --zero-stats
 
       - name: Configure
-        run: cmake -S . -B build/linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build/linux -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build/linux --config Release
@@ -83,8 +83,8 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ github.job }}-v1
 
-      - name: Install ccache
-        run: brew install ccache
+      - name: Install build tools
+        run: brew install ccache ninja
 
       - name: Prime ccache
         run: |
@@ -92,7 +92,7 @@ jobs:
           ccache --zero-stats
 
       - name: Configure
-        run: cmake -S . -B build/macos
+        run: cmake -S . -B build/macos -G Ninja
 
       - name: Build
         run: cmake --build build/macos
@@ -126,7 +126,7 @@ jobs:
           sudo apt-get install -y \
             ccache \
             cmake \
-            make \
+            ninja-build \
             g++-mingw-w64-x86-64 \
             xz-utils \
             mingw-w64
