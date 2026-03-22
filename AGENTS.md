@@ -21,3 +21,6 @@ Operational behavior:
 - About shows app name and version (`0.2` from `CSV_EXPLORER_VERSION` in CMake).
 - On Windows the executable target is `WIN32` (no console window).
 - On macOS the bundle identifier is set to `gent.cyber.csvexplorer`.
+
+Workflow:
+- After making a change, create a git commit with a suitable commit message unless explicitly told not to.

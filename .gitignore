@@ -45,3 +45,4 @@ core
 *.core
 *.stackdump
 core-*
+*.log
