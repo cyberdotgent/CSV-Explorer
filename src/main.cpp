@@ -207,6 +207,7 @@ private:
         m_grid->Bind(wxEVT_GRID_EDITOR_SHOWN, &MainFrame::OnEditorShown, this);
         m_grid->Bind(wxEVT_CHAR_HOOK, &MainFrame::OnGridCharHook, this);
         m_grid->Bind(wxEVT_SIZE, &MainFrame::OnGridResized, this);
+        m_grid->GetGridWindow()->Bind(wxEVT_LEFT_DCLICK, &MainFrame::OnGridWindowLeftDClick, this);
 
         m_headerEditor = new wxTextCtrl(
             m_grid->GetGridColLabelWindow(),
@@ -570,7 +571,7 @@ private:
         CancelHeaderEdit();
         CommitActiveEdit();
 
-        m_rows.clear();
+        m_rows.assign(1, std::vector<wxString>(1, wxString()));
         m_headers.assign(1, wxString());
         m_currentFile.clear();
         m_documentName = "untitled.csv";
@@ -1148,6 +1149,23 @@ private:
 
     void OnGridResized(wxSizeEvent& event) {
         RepositionHeaderEditor();
+        event.Skip();
+    }
+
+    void OnGridWindowLeftDClick(wxMouseEvent& event) {
+        int logicalX = 0;
+        int logicalY = 0;
+        m_grid->CalcUnscrolledPosition(event.GetX(), event.GetY(), &logicalX, &logicalY);
+
+        if (logicalY >= 0 && m_grid->YToRow(logicalY) == wxNOT_FOUND) {
+            AppendEmptyRow();
+            if (m_grid->GetNumberCols() > 0) {
+                SelectCell(static_cast<unsigned int>(m_grid->GetNumberRows() - 1), 0);
+                m_grid->EnableCellEditControl();
+            }
+            return;
+        }
+
         event.Skip();
     }
 
