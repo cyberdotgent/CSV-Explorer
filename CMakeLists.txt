@@ -57,7 +57,9 @@ add_executable(csv_explorer
     src/about_dialog.cpp
     src/go_to_row_dialog.cpp
     src/main.cpp
+    src/main_frame.cpp
     src/print_support.cpp
+    src/unsaved_changes_dialog.cpp
 )
 
 set_target_properties(csv_explorer PROPERTIES
