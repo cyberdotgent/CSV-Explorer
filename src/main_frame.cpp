@@ -198,7 +198,7 @@ private:
 
 class EditorPage : public wxPanel {
 public:
-    explicit EditorPage(MainFrame& owner);
+    EditorPage(MainFrame& owner, wxWindow* parent);
     ~EditorPage() override;
 
     bool OpenDocumentFile(const wxString& path);
@@ -471,7 +471,7 @@ void MainFrame::ApplyWindowIcon() {
 }
 
 EditorPage* MainFrame::CreateBlankTab(bool activate, bool startEditingHeader) {
-    auto* page = new EditorPage(*this);
+    auto* page = new EditorPage(*this, m_notebook);
     const size_t pageIndex = static_cast<size_t>(m_notebook->GetPageCount());
     m_notebook->AddPage(page, "untitled.csv", activate);
     page->CreateBlankDocument(startEditingHeader);
@@ -697,8 +697,8 @@ void MainFrame::OnClose(wxCloseEvent& event) {
     event.Skip();
 }
 
-EditorPage::EditorPage(MainFrame& owner)
-    : wxPanel(&owner),
+EditorPage::EditorPage(MainFrame& owner, wxWindow* parent)
+    : wxPanel(parent),
       m_owner(owner) {
     SetDropTarget(new CsvFileDropTarget(*this));
     BuildGrid();
