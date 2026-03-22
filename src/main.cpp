@@ -166,6 +166,7 @@ private:
         m_grid->EnableEditing(true);
         m_grid->EnableDragRowSize(false);
         m_grid->EnableDragColSize(true);
+        m_grid->SetDefaultCellOverflow(false);
         m_grid->SetRowLabelSize(0);
         m_grid->SetColLabelAlignment(wxALIGN_LEFT, wxALIGN_CENTER);
 
