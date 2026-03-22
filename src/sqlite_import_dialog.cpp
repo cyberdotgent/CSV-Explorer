@@ -556,6 +556,9 @@ public:
             wxFLP_SAVE);
         topSizer->Add(m_databasePicker, 0, wxEXPAND | wxALL, FromDIP(12));
 
+        m_databasePathLabel = new wxStaticText(this, wxID_ANY, "No database selected");
+        topSizer->Add(m_databasePathLabel, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(12));
+
         auto* tableLabel = new wxStaticText(this, wxID_ANY, "Table name");
         topSizer->Add(tableLabel, 0, wxLEFT | wxRIGHT, FromDIP(12));
 
@@ -615,6 +618,13 @@ public:
 
 private:
     void UpdateExportButton() {
+        if (m_databasePathLabel) {
+            const wxString path = m_databasePicker->GetPath();
+            m_databasePathLabel->SetLabel(path.IsEmpty() ? "No database selected" : path);
+            m_databasePathLabel->Wrap(FromDIP(600));
+            Layout();
+        }
+
         if (wxWindow* button = FindWindow(wxID_OK)) {
             button->Enable(!m_databasePicker->GetPath().IsEmpty() && !m_tableNameCtrl->GetValue().Trim(true).Trim(false).IsEmpty());
         }
@@ -658,6 +668,7 @@ private:
     const ImportedSqliteTable& m_table;
     std::vector<wxString> m_columnNames;
     wxFilePickerCtrl* m_databasePicker{nullptr};
+    wxStaticText* m_databasePathLabel{nullptr};
     wxTextCtrl* m_tableNameCtrl{nullptr};
     wxStaticText* m_statusLabel{nullptr};
     std::vector<wxChoice*> m_typeChoices;
