@@ -73,7 +73,11 @@ add_executable(csv_explorer
     src/go_to_row_dialog.cpp
     src/main.cpp
     src/main_frame.cpp
+    src/print_preview_frame.cpp
+    src/print_rendering.cpp
     src/print_support.cpp
+    src/sqlite_dialog_common.cpp
+    src/sqlite_export_dialog.cpp
     src/sqlite_import_dialog.cpp
     src/unsaved_changes_dialog.cpp
 )
