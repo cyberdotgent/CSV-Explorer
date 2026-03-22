@@ -139,10 +139,19 @@ public:
         BuildStatusBar();
         ApplyWindowIcon();
         if (!initialFile.IsEmpty()) {
-            OpenFile(initialFile);
+            OpenDocumentFile(initialFile);
         } else {
             CreateNewFile();
         }
+    }
+
+    bool OpenDocumentFile(const wxString& path) {
+        if (!ConfirmDirtyFileAction()) {
+            return false;
+        }
+
+        OpenFile(path);
+        return !m_currentFile.IsEmpty() && m_currentFile == path;
     }
 
 private:
@@ -1348,4 +1357,13 @@ wxEND_EVENT_TABLE()
 
 wxFrame* CreateMainFrame(const wxString& initialFile) {
     return new MainFrame(initialFile);
+}
+
+bool OpenFileInMainFrame(wxFrame* frame, const wxString& path) {
+    auto* mainFrame = dynamic_cast<MainFrame*>(frame);
+    if (!mainFrame) {
+        return false;
+    }
+
+    return mainFrame->OpenDocumentFile(path);
 }
