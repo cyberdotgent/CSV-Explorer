@@ -23,6 +23,7 @@ namespace {
 
 enum {
     ID_NEW_TAB = wxID_HIGHEST + 1,
+    ID_CLOSE_TAB,
     ID_FIND_NEXT,
     ID_FIND_PREVIOUS,
     ID_GO_TO_FIRST,
@@ -171,11 +172,13 @@ private:
     void UpdateFrameTitle();
     void UpdateStatusBar();
     bool ConfirmCloseAllPages();
+    bool ClosePage(EditorPage* page);
     EditorPage* CreateBlankTab(bool activate, bool startEditingHeader);
     bool OpenPathInPreferredPage(EditorPage* preferredPage, const wxString& path);
 
     void OnNewWindow(wxCommandEvent&);
     void OnNewTab(wxCommandEvent&);
+    void OnCloseTab(wxCommandEvent&);
     void OnOpen(wxCommandEvent&);
     void OnSave(wxCommandEvent&);
     void OnSaveAs(wxCommandEvent&);
@@ -361,6 +364,7 @@ void MainFrame::BuildMenuBar() {
     auto* fileMenu = new wxMenu();
     fileMenu->Append(wxID_NEW, "&New Window\tCtrl+N");
     fileMenu->Append(ID_NEW_TAB, "New &Tab\tCtrl+T");
+    fileMenu->Append(ID_CLOSE_TAB, "&Close Tab\tCtrl+W");
     fileMenu->Append(wxID_OPEN, "&Open...\tCtrl+O");
     fileMenu->AppendSeparator();
     fileMenu->Append(wxID_SAVE, "&Save\tCtrl+S");
@@ -412,6 +416,7 @@ void MainFrame::BuildAccelerators() {
     wxAcceleratorEntry entries[] = {
         { wxACCEL_CTRL, 'N', wxID_NEW },
         { wxACCEL_CTRL, 'T', ID_NEW_TAB },
+        { wxACCEL_CTRL, 'W', ID_CLOSE_TAB },
         { wxACCEL_CTRL, 'O', wxID_OPEN },
         { wxACCEL_CTRL, 'S', wxID_SAVE },
         { wxACCEL_CTRL | wxACCEL_SHIFT, 'S', wxID_SAVEAS },
@@ -444,6 +449,7 @@ void MainFrame::BuildNotebook() {
 
     Bind(wxEVT_MENU, &MainFrame::OnNewWindow, this, wxID_NEW);
     Bind(wxEVT_MENU, &MainFrame::OnNewTab, this, ID_NEW_TAB);
+    Bind(wxEVT_MENU, &MainFrame::OnCloseTab, this, ID_CLOSE_TAB);
     Bind(wxEVT_MENU, &MainFrame::OnOpen, this, wxID_OPEN);
     Bind(wxEVT_MENU, &MainFrame::OnSave, this, wxID_SAVE);
     Bind(wxEVT_MENU, &MainFrame::OnSaveAs, this, wxID_SAVEAS);
@@ -596,12 +602,44 @@ bool MainFrame::ConfirmCloseAllPages() {
     return true;
 }
 
+bool MainFrame::ClosePage(EditorPage* page) {
+    if (!page || !m_notebook) {
+        return false;
+    }
+
+    if (!page->ConfirmClose()) {
+        return false;
+    }
+
+    if (m_notebook->GetPageCount() <= 1) {
+        Close();
+        return true;
+    }
+
+    const int index = m_notebook->FindPage(page);
+    if (index == wxNOT_FOUND) {
+        return false;
+    }
+
+    m_notebook->DeletePage(static_cast<size_t>(index));
+    UpdateFrameTitle();
+    UpdateStatusBar();
+    if (EditorPage* activePage = GetActivePage()) {
+        activePage->FocusEditor();
+    }
+    return true;
+}
+
 void MainFrame::OnNewWindow(wxCommandEvent&) {
     CreateAndShowMainFrame({});
 }
 
 void MainFrame::OnNewTab(wxCommandEvent&) {
     CreateBlankTab(true, true);
+}
+
+void MainFrame::OnCloseTab(wxCommandEvent&) {
+    ClosePage(GetActivePage());
 }
 
 void MainFrame::OnOpen(wxCommandEvent&) {
