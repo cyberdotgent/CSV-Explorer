@@ -3,6 +3,7 @@
 #include <wx/textfile.h>
 #include <wx/filename.h>
 #include <wx/clipbrd.h>
+#include <wx/dnd.h>
 #include <wx/ffile.h>
 #include <wx/grid.h>
 
@@ -133,19 +134,42 @@ class MainFrame : public wxFrame {
 public:
     explicit MainFrame(const wxString& initialFile)
         : wxFrame(nullptr, wxID_ANY, CSV_EXPLORER_NAME, wxDefaultPosition, wxSize(900, 600)) {
+        SetDropTarget(new CsvFileDropTarget(*this));
         BuildMenuBar();
         BuildAccelerators();
         BuildGrid();
         BuildStatusBar();
         ApplyWindowIcon();
         if (!initialFile.IsEmpty()) {
-            OpenFile(initialFile);
+            OpenDocumentFile(initialFile);
         } else {
             CreateNewFile();
         }
     }
 
+    bool OpenDocumentFile(const wxString& path) {
+        if (!ConfirmDirtyFileAction()) {
+            return false;
+        }
+
+        OpenFile(path);
+        return !m_currentFile.IsEmpty() && m_currentFile == path;
+    }
+
 private:
+    class CsvFileDropTarget final : public wxFileDropTarget {
+    public:
+        explicit CsvFileDropTarget(MainFrame& frame)
+            : m_frame(frame) {}
+
+        bool OnDropFiles(wxCoord, wxCoord, const wxArrayString& filenames) override {
+            return m_frame.HandleDroppedFiles(filenames);
+        }
+
+    private:
+        MainFrame& m_frame;
+    };
+
     void BuildMenuBar() {
         auto* fileMenu = new wxMenu();
         fileMenu->Append(wxID_NEW, "&New\tCtrl+N");
@@ -170,9 +194,9 @@ private:
         editMenu->AppendSeparator();
         auto* goToMenu = new wxMenu();
 #ifdef __WXOSX__
-        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCmd+Up");
-        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCmd+Down");
-        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...\tCmd+G");
+        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCtrl+Up");
+        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCtrl+Down");
+        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...\tCtrl+G");
 #else
         goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCtrl+Home");
         goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCtrl+End");
@@ -214,6 +238,8 @@ private:
         m_grid->Bind(wxEVT_CHAR_HOOK, &MainFrame::OnGridCharHook, this);
         m_grid->Bind(wxEVT_SIZE, &MainFrame::OnGridResized, this);
         m_grid->GetGridWindow()->Bind(wxEVT_LEFT_DCLICK, &MainFrame::OnGridWindowLeftDClick, this);
+        m_grid->SetDropTarget(new CsvFileDropTarget(*this));
+        m_grid->GetGridWindow()->SetDropTarget(new CsvFileDropTarget(*this));
 
         m_headerEditor = new wxTextCtrl(
             m_grid->GetGridColLabelWindow(),
@@ -689,6 +715,14 @@ private:
         UpdateTitle();
         UpdateStatusBar();
         ResizeToCsvContent();
+    }
+
+    bool HandleDroppedFiles(const wxArrayString& filenames) {
+        if (!IsEffectivelyEmptyDocument() || filenames.empty()) {
+            return false;
+        }
+
+        return OpenDocumentFile(filenames[0]);
     }
 
     void ResizeToCsvContent() {
@@ -1348,4 +1382,13 @@ wxEND_EVENT_TABLE()
 
 wxFrame* CreateMainFrame(const wxString& initialFile) {
     return new MainFrame(initialFile);
+}
+
+bool OpenFileInMainFrame(wxFrame* frame, const wxString& path) {
+    auto* mainFrame = dynamic_cast<MainFrame*>(frame);
+    if (!mainFrame) {
+        return false;
+    }
+
+    return mainFrame->OpenDocumentFile(path);
 }

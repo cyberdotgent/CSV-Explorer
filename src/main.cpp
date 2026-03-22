@@ -13,9 +13,21 @@ public:
         }
 
         auto* frame = CreateMainFrame(initialFile);
+        SetTopWindow(frame);
         frame->Show();
         return true;
     }
+
+#ifdef __WXOSX__
+    void MacOpenFile(const wxString& fileName) override {
+        wxFrame* frame = wxDynamicCast(GetTopWindow(), wxFrame);
+        if (!frame) {
+            return;
+        }
+
+        OpenFileInMainFrame(frame, fileName);
+    }
+#endif
 };
 
 wxIMPLEMENT_APP(CsvExplorerApp);
