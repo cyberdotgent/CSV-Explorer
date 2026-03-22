@@ -97,14 +97,17 @@ jobs:
       - name: Build
         run: cmake --build build/macos
 
+      - name: Package
+        run: cmake --build build/macos --target package
+
       - name: Show ccache stats
         run: ccache --show-stats
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wxcsv-macos
-          path: build/macos/wxCsv.app
+          name: csv-explorer-macos-dmg
+          path: build/macos/*.dmg
 
   windows-mingw:
     name: Windows (MinGW cross, Ubuntu container)
