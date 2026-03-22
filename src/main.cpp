@@ -135,15 +135,17 @@ public:
         BuildGrid();
         BuildStatusBar();
         ApplyWindowIcon();
-        UpdateTitle();
         if (!initialFile.IsEmpty()) {
             OpenFile(initialFile);
+        } else {
+            CreateNewFile();
         }
     }
 
 private:
     void BuildMenuBar() {
         auto* fileMenu = new wxMenu();
+        fileMenu->Append(wxID_NEW, "&New\tCtrl+N");
         fileMenu->Append(wxID_OPEN, "&Open...\tCtrl+O");
         fileMenu->Append(wxID_SAVE, "&Save\tCtrl+S");
         fileMenu->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
@@ -232,6 +234,7 @@ private:
 
     void BuildAccelerators() {
         wxAcceleratorEntry entries[] = {
+            { wxACCEL_CTRL, 'N', wxID_NEW },
             { wxACCEL_CTRL, 'O', wxID_OPEN },
             { wxACCEL_CTRL, 'S', wxID_SAVE },
             { wxACCEL_CTRL | wxACCEL_SHIFT, 'S', wxID_SAVEAS },
@@ -347,16 +350,7 @@ private:
     }
 
     void UpdateTitle() {
-        wxString title = CSV_EXPLORER_NAME;
-        if (m_currentFile.IsEmpty()) {
-            if (m_isDirty) {
-                title += " *";
-            }
-            SetTitle(title);
-            return;
-        }
-
-        title = wxString::Format("%s - %s", CSV_EXPLORER_NAME, wxFileName(m_currentFile).GetFullName());
+        wxString title = wxString::Format("%s - %s", CSV_EXPLORER_NAME, GetDisplayFileName());
         if (m_isDirty) {
             title += " *";
         }
@@ -386,6 +380,13 @@ private:
         m_isDirty = dirty;
         UpdateTitle();
         UpdateStatusBar();
+    }
+
+    wxString GetDisplayFileName() const {
+        if (!m_currentFile.IsEmpty()) {
+            return wxFileName(m_currentFile).GetFullName();
+        }
+        return m_documentName;
     }
 
     int GetActiveRowIndex() const {
@@ -538,6 +539,7 @@ private:
         }
 
         m_currentFile = path;
+        m_documentName = wxFileName(path).GetFullName();
         SetDirty(false);
         UpdateTitle();
         return true;
@@ -555,13 +557,35 @@ private:
             this,
             "Save CSV file",
             {},
-            m_currentFile.IsEmpty() ? "data.csv" : wxFileName(m_currentFile).GetFullName(),
+            m_currentFile.IsEmpty() ? m_documentName : wxFileName(m_currentFile).GetFullName(),
             "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
             wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if (dialog.ShowModal() != wxID_OK) {
             return false;
         }
         return SaveToPath(dialog.GetPath());
+    }
+
+    void CreateNewFile() {
+        CancelHeaderEdit();
+        CommitActiveEdit();
+
+        m_rows.clear();
+        m_headers.assign(1, wxString());
+        m_currentFile.clear();
+        m_documentName = "untitled.csv";
+        m_lastFindValid = false;
+        m_lastFindIndex = 0;
+
+        RefreshGridFromData();
+        ResizeToCsvContent();
+        SetDirty(true);
+        UpdateTitle();
+        UpdateStatusBar();
+
+        if (m_grid->GetNumberCols() > 0) {
+            BeginHeaderEdit(0);
+        }
     }
 
     void OpenFile(const wxString& path) {
@@ -584,6 +608,7 @@ private:
         m_grid->ClearSelection();
 
         m_currentFile = path;
+        m_documentName = wxFileName(path).GetFullName();
         m_lastFindValid = false;
         m_lastFindIndex = 0;
         SetDirty(false);
@@ -923,6 +948,10 @@ private:
         }
     }
 
+    void OnNew(wxCommandEvent&) {
+        CreateNewFile();
+    }
+
     void OnExit(wxCommandEvent&) {
         Close();
     }
@@ -1134,6 +1163,7 @@ private:
     bool m_lastFindValid{false};
     bool m_isDirty{false};
     bool m_isRefreshingGrid{false};
+    wxString m_documentName{"untitled.csv"};
     int m_contextRow{-1};
     int m_contextColumn{-1};
     int m_activeHeaderColumn{-1};
@@ -1142,6 +1172,7 @@ private:
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
+    EVT_MENU(wxID_NEW, MainFrame::OnNew)
     EVT_MENU(wxID_OPEN, MainFrame::OnOpen)
     EVT_MENU(wxID_SAVE, MainFrame::OnSave)
     EVT_MENU(wxID_SAVEAS, MainFrame::OnSaveAs)
