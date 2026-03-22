@@ -5,7 +5,7 @@
       "name": "windows-mingw64",
       "displayName": "Windows x64 MinGW (cross-compile)",
       "description": "Configure CSV Explorer for 64-bit Windows using a MinGW cross toolchain with static wxWidgets.",
-      "generator": "Unix Makefiles",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/windows-mingw64",
       "toolchainFile": "${sourceDir}/cmake/toolchains/mingw-x86_64.cmake",
       "cacheVariables": {
