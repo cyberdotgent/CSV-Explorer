@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(CSVExplorer VERSION 0.2.0 LANGUAGES CXX)
+project(CSVExplorer VERSION 0.3.0 LANGUAGES CXX)
 
-set(CSV_EXPLORER_VERSION "0.2")
+set(CSV_EXPLORER_VERSION "${PROJECT_VERSION}")
 set(CSV_EXPLORER_LICENSE "MIT")
 set(CSV_EXPLORER_AUTHOR "Yvan Janssens")
 set(CSV_EXPLORER_REPOSITORY_URL "https://github.com/cyberdotgent/CSV-Explorer")
