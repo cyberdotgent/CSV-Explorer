@@ -161,14 +161,20 @@ private:
         editMenu->AppendSubMenu(insertMenu, "&Insert");
         editMenu->AppendSeparator();
         auto* goToMenu = new wxMenu();
-        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First");
-        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last");
-        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...");
+#ifdef __WXOSX__
+        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCmd+Up");
+        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCmd+Down");
+        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...\tCmd+G");
+#else
+        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCtrl+Home");
+        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCtrl+End");
+        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...\tCtrl+G");
+#endif
         editMenu->AppendSubMenu(goToMenu, "&Go To");
         editMenu->AppendSeparator();
         editMenu->Append(wxID_FIND, "&Find...\tCtrl+F");
-        editMenu->Append(ID_FIND_NEXT, "Find &Next\tCtrl+G");
-        editMenu->Append(ID_FIND_PREVIOUS, "Find &Previous\tShift+Ctrl+G");
+        editMenu->Append(ID_FIND_NEXT, "Find &Next\tF3");
+        editMenu->Append(ID_FIND_PREVIOUS, "Find &Previous\tShift+F3");
 
         auto* helpMenu = new wxMenu();
         helpMenu->Append(wxID_ABOUT, "&About");
@@ -232,8 +238,16 @@ private:
             { wxACCEL_CTRL, 'Q', wxID_EXIT },
             { wxACCEL_CTRL, 'C', wxID_COPY },
             { wxACCEL_CTRL, 'F', wxID_FIND },
-            { wxACCEL_CTRL, 'G', ID_FIND_NEXT },
-            { wxACCEL_CTRL | wxACCEL_SHIFT, 'G', ID_FIND_PREVIOUS }
+            { wxACCEL_NORMAL, WXK_F3, ID_FIND_NEXT },
+            { wxACCEL_SHIFT, WXK_F3, ID_FIND_PREVIOUS },
+            { wxACCEL_CTRL, 'G', ID_GO_TO_ROW },
+#ifdef __WXOSX__
+            { wxACCEL_CTRL, WXK_UP, ID_GO_TO_FIRST },
+            { wxACCEL_CTRL, WXK_DOWN, ID_GO_TO_LAST }
+#else
+            { wxACCEL_CTRL, WXK_HOME, ID_GO_TO_FIRST },
+            { wxACCEL_CTRL, WXK_END, ID_GO_TO_LAST }
+#endif
         };
         const int entryCount = static_cast<int>(sizeof(entries) / sizeof(entries[0]));
         wxAcceleratorTable accelerators(entryCount, entries);
