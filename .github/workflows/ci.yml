@@ -8,6 +8,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 env:
   CCACHE_DIR: ~/.cache/ccache
   CCACHE_REMOTE_STORAGE: "http://buildcache.cyber.gent/|layout=bazel"
