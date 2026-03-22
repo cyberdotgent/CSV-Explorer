@@ -684,7 +684,7 @@ private:
         insertAt = std::clamp(insertAt, 0, static_cast<int>(GetColumnCount()));
         m_headers.insert(m_headers.begin() + insertAt, "New column");
         for (auto& row : m_rows) {
-            row.insert(row.begin() + insertAt, {});
+            row.insert(row.begin() + insertAt, wxString());
         }
 
         NormalizeRows(static_cast<unsigned int>(m_headers.size()));
