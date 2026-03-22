@@ -13,6 +13,7 @@
 #include "about_dialog.h"
 #include "config.h"
 #include "go_to_row_dialog.h"
+#include "print_support.h"
 
 namespace {
 
@@ -222,6 +223,9 @@ private:
         fileMenu->Append(wxID_SAVE, "&Save\tCtrl+S");
         fileMenu->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
         fileMenu->AppendSeparator();
+        fileMenu->Append(wxID_PREVIEW, "Print Pre&view\tCtrl+Shift+P");
+        fileMenu->Append(wxID_PRINT, "&Print...\tCtrl+P");
+        fileMenu->AppendSeparator();
         fileMenu->Append(wxID_EXIT, "E&xit\tCtrl+Q");
 
         auto* editMenu = new wxMenu();
@@ -311,6 +315,8 @@ private:
             { wxACCEL_CTRL, 'O', wxID_OPEN },
             { wxACCEL_CTRL, 'S', wxID_SAVE },
             { wxACCEL_CTRL | wxACCEL_SHIFT, 'S', wxID_SAVEAS },
+            { wxACCEL_CTRL, 'P', wxID_PRINT },
+            { wxACCEL_CTRL | wxACCEL_SHIFT, 'P', wxID_PREVIEW },
             { wxACCEL_CTRL, 'Q', wxID_EXIT },
             { wxACCEL_CTRL, 'C', wxID_COPY },
             { wxACCEL_CTRL, 'F', wxID_FIND },
@@ -665,6 +671,14 @@ private:
         }
 
         return false;
+    }
+
+    PrintableDocument BuildPrintableDocument() const {
+        PrintableDocument document;
+        document.title = GetDisplayFileName();
+        document.headers = m_headers;
+        document.rows = m_rows;
+        return document;
     }
 
     void CreateNewFile() {
@@ -1073,6 +1087,24 @@ private:
         SaveCurrentFileAs();
     }
 
+    void OnPrintPreview(wxCommandEvent&) {
+        CommitHeaderEdit();
+        CommitActiveEdit();
+        if (m_printData.GetOrientation() != wxLANDSCAPE && m_printData.GetOrientation() != wxPORTRAIT) {
+            m_printData.SetOrientation(GuessLandscapeForPrint(BuildPrintableDocument()) ? wxLANDSCAPE : wxPORTRAIT);
+        }
+        ShowPrintPreviewWindow(this, BuildPrintableDocument(), m_printData);
+    }
+
+    void OnPrint(wxCommandEvent&) {
+        CommitHeaderEdit();
+        CommitActiveEdit();
+        if (m_printData.GetOrientation() != wxLANDSCAPE && m_printData.GetOrientation() != wxPORTRAIT) {
+            m_printData.SetOrientation(GuessLandscapeForPrint(BuildPrintableDocument()) ? wxLANDSCAPE : wxPORTRAIT);
+        }
+        ShowPrintDialogForDocument(this, BuildPrintableDocument(), m_printData);
+    }
+
     void OnCopy(wxCommandEvent&) {
         CopySelection();
     }
@@ -1314,6 +1346,7 @@ private:
     wxString m_currentFile;
     wxFindReplaceData m_findData{wxFR_DOWN};
     wxFindReplaceDialog* m_findDialog{nullptr};
+    wxPrintData m_printData;
     size_t m_lastFindIndex{0};
     bool m_lastFindValid{false};
     bool m_isDirty{false};
@@ -1331,6 +1364,8 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_OPEN, MainFrame::OnOpen)
     EVT_MENU(wxID_SAVE, MainFrame::OnSave)
     EVT_MENU(wxID_SAVEAS, MainFrame::OnSaveAs)
+    EVT_MENU(wxID_PREVIEW, MainFrame::OnPrintPreview)
+    EVT_MENU(wxID_PRINT, MainFrame::OnPrint)
     EVT_MENU(wxID_EXIT, MainFrame::OnExit)
     EVT_MENU(wxID_COPY, MainFrame::OnCopy)
     EVT_MENU(ID_GO_TO_FIRST, MainFrame::OnGoToFirst)
