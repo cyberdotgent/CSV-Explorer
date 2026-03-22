@@ -74,6 +74,7 @@ add_executable(csv_explorer
     src/main.cpp
     src/main_frame.cpp
     src/print_support.cpp
+    src/sqlite_import_dialog.cpp
     src/unsaved_changes_dialog.cpp
 )
 
