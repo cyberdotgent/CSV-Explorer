@@ -415,7 +415,11 @@ void MainFrame::BuildMenuBar() {
     auto* bar = new wxMenuBar();
     bar->Append(fileMenu, "&File");
     bar->Append(editMenu, "&Edit");
+#ifdef __WXOSX__
+    bar->Append(windowMenu, "Window");
+#else
     bar->Append(windowMenu, "&Window");
+#endif
     bar->Append(helpMenu, "&Help");
     SetMenuBar(bar);
 }
