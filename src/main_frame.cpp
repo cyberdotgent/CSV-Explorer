@@ -170,9 +170,9 @@ private:
         editMenu->AppendSeparator();
         auto* goToMenu = new wxMenu();
 #ifdef __WXOSX__
-        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCmd+Up");
-        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCmd+Down");
-        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...\tCmd+G");
+        goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCtrl+Up");
+        goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCtrl+Down");
+        goToMenu->Append(ID_GO_TO_ROW, "Go to &Row...\tCtrl+G");
 #else
         goToMenu->Append(ID_GO_TO_FIRST, "Go to &First\tCtrl+Home");
         goToMenu->Append(ID_GO_TO_LAST, "Go to &Last\tCtrl+End");
