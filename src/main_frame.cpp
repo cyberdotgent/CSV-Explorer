@@ -152,6 +152,7 @@ public:
     bool OpenDocumentPath(const wxString& path);
     bool OpenDroppedFiles(EditorPage* preferredPage, const wxArrayString& filenames);
     void NotifyPageStateChanged(EditorPage* page);
+    void ResizeToContentOnce(EditorPage* page);
     EditorPage* GetActivePage() const;
 
 private:
@@ -204,10 +205,13 @@ private:
     void OnClose(wxCloseEvent&);
 
     wxAuiNotebook* m_notebook{nullptr};
+    bool m_hasAutoResizedToContent{false};
 };
 
 class EditorPage : public wxPanel {
 public:
+    friend class MainFrame;
+
     EditorPage(MainFrame& owner, wxWindow* parent);
     ~EditorPage() override;
 
@@ -237,6 +241,9 @@ public:
     void ShowPrintPreview();
     void ShowPrint();
     void FocusEditor();
+    bool HasLoadedFile() const {
+        return !m_currentFile.IsEmpty();
+    }
 
 private:
     class CsvFileDropTarget final : public wxFileDropTarget {
@@ -514,6 +521,15 @@ void MainFrame::ApplyWindowIcon() {
     if (icon.IsOk()) {
         SetIcon(icon);
     }
+}
+
+void MainFrame::ResizeToContentOnce(EditorPage* page) {
+    if (m_hasAutoResizedToContent || !page || !page->HasLoadedFile()) {
+        return;
+    }
+
+    m_hasAutoResizedToContent = true;
+    page->ResizeOwnerToContent();
 }
 
 EditorPage* MainFrame::CreateBlankTab(bool activate, bool startEditingHeader) {
@@ -1265,7 +1281,6 @@ void EditorPage::CreateBlankDocument(bool startEditingHeader) {
     m_contextColumn = -1;
 
     RefreshGridFromData();
-    ResizeOwnerToContent();
     m_isDirty = false;
     NotifyStateChanged();
 
@@ -1300,7 +1315,7 @@ void EditorPage::OpenFileInternal(const wxString& path) {
     m_lastFindIndex = 0;
     m_isDirty = false;
     NotifyStateChanged();
-    ResizeOwnerToContent();
+    m_owner.ResizeToContentOnce(this);
 }
 
 bool EditorPage::OpenDocumentFile(const wxString& path) {
@@ -1480,7 +1495,6 @@ void EditorPage::InsertColumn(int insertAt) {
 
     NormalizeRows(static_cast<unsigned int>(m_headers.size()));
     RefreshGridFromData();
-    ResizeOwnerToContent();
     SetDirty(true);
     BeginHeaderEdit(insertAt);
 }
