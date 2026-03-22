@@ -423,7 +423,7 @@ public:
             wxID_ANY,
             {},
             "Choose a SQLite database",
-            "SQLite files (*.db;*.sqlite;*.sqlite3)|*.db;*.sqlite;*.sqlite3|All files (*.*)|*.*",
+            "SQLite databases (*.sqlite)|*.sqlite|All files (*.*)|*.*",
             wxDefaultPosition,
             wxDefaultSize,
             wxFLP_OPEN | wxFLP_FILE_MUST_EXIST | wxFLP_USE_TEXTCTRL);
@@ -550,7 +550,7 @@ public:
             wxID_ANY,
             {},
             "Choose a SQLite database",
-            "SQLite files (*.db;*.sqlite;*.sqlite3)|*.db;*.sqlite;*.sqlite3|All files (*.*)|*.*",
+            "SQLite databases (*.sqlite)|*.sqlite|All files (*.*)|*.*",
             wxDefaultPosition,
             wxDefaultSize,
             wxFLP_SAVE);
