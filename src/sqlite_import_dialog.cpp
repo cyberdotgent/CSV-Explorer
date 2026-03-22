@@ -426,8 +426,11 @@ public:
             "SQLite databases (*.sqlite)|*.sqlite|All files (*.*)|*.*",
             wxDefaultPosition,
             wxDefaultSize,
-            wxFLP_OPEN | wxFLP_FILE_MUST_EXIST | wxFLP_USE_TEXTCTRL);
+            wxFLP_OPEN | wxFLP_FILE_MUST_EXIST);
         topSizer->Add(m_databasePicker, 0, wxEXPAND | wxALL, FromDIP(12));
+
+        m_databasePathLabel = new wxStaticText(this, wxID_ANY, "No database selected");
+        topSizer->Add(m_databasePathLabel, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(12));
 
         auto* tableLabel = new wxStaticText(this, wxID_ANY, "Table");
         topSizer->Add(tableLabel, 0, wxLEFT | wxRIGHT, FromDIP(12));
@@ -442,7 +445,7 @@ public:
         topSizer->Add(buttonSizer, 0, wxEXPAND | wxALL, FromDIP(12));
 
         SetSizerAndFit(topSizer);
-        SetMinSize(FromDIP(wxSize(520, 220)));
+        SetMinSize(FromDIP(wxSize(720, 240)));
 
         if (wxButton* okButton = dynamic_cast<wxButton*>(FindWindow(wxID_OK))) {
             okButton->SetLabel("Import");
@@ -469,8 +472,12 @@ private:
         m_statusLabel->SetLabel({});
 
         const wxString path = m_databasePicker->GetPath();
+        m_databasePathLabel->SetLabel(path.IsEmpty() ? "No database selected" : path);
+        m_databasePathLabel->Wrap(FromDIP(680));
+
         if (path.IsEmpty()) {
             UpdateImportButton();
+            Layout();
             return;
         }
 
@@ -527,6 +534,7 @@ private:
     }
 
     wxFilePickerCtrl* m_databasePicker{nullptr};
+    wxStaticText* m_databasePathLabel{nullptr};
     wxChoice* m_tableChoice{nullptr};
     wxStaticText* m_statusLabel{nullptr};
     std::vector<wxString> m_tables;
