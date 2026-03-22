@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -244,10 +245,18 @@ private:
 
 class PrintPreviewPanel final : public wxPanel {
 public:
-    PrintPreviewPanel(wxWindow* parent, const PrintableDocument& document, bool landscape)
-        : wxPanel(parent, wxID_ANY), m_document(document), m_landscape(landscape) {
+    PrintPreviewPanel(
+        wxWindow* parent,
+        const PrintableDocument& document,
+        bool landscape,
+        std::function<void(int)> pageScrollHandler)
+        : wxPanel(parent, wxID_ANY),
+          m_document(document),
+          m_landscape(landscape),
+          m_pageScrollHandler(std::move(pageScrollHandler)) {
         SetBackgroundStyle(wxBG_STYLE_PAINT);
         Bind(wxEVT_PAINT, &PrintPreviewPanel::OnPaint, this);
+        Bind(wxEVT_MOUSEWHEEL, &PrintPreviewPanel::OnMouseWheel, this);
     }
 
     void SetPageNumber(int pageNumber) {
@@ -297,9 +306,25 @@ private:
         DrawPage(dc, m_document, m_pageNumber, m_landscape);
     }
 
+    void OnMouseWheel(wxMouseEvent& event) {
+        if (!m_pageScrollHandler) {
+            event.Skip();
+            return;
+        }
+
+        const int rotation = event.GetWheelRotation();
+        if (rotation == 0) {
+            event.Skip();
+            return;
+        }
+
+        m_pageScrollHandler(rotation > 0 ? -1 : 1);
+    }
+
     PrintableDocument m_document;
     bool m_landscape{false};
     int m_pageNumber{1};
+    std::function<void(int)> m_pageScrollHandler;
 };
 
 class PrintPreviewFrame final : public wxFrame {
@@ -326,7 +351,11 @@ public:
         toolbar->AddControl(m_pageLabel);
         toolbar->Realize();
 
-        m_previewPanel = new PrintPreviewPanel(this, m_document, m_landscape);
+        m_previewPanel = new PrintPreviewPanel(
+            this,
+            m_document,
+            m_landscape,
+            [this](int delta) { ChangePage(delta); });
         auto* sizer = new wxBoxSizer(wxVERTICAL);
         sizer->Add(m_previewPanel, 1, wxEXPAND, 0);
         SetSizer(sizer);
@@ -365,17 +394,11 @@ private:
     }
 
     void OnPreviousPage(wxCommandEvent&) {
-        if (m_currentPage > 1) {
-            --m_currentPage;
-            UpdateOrientation();
-        }
+        ChangePage(-1);
     }
 
     void OnNextPage(wxCommandEvent&) {
-        if (m_currentPage < m_pageCount) {
-            ++m_currentPage;
-            UpdateOrientation();
-        }
+        ChangePage(1);
     }
 
     void OnPortrait(wxCommandEvent&) {
@@ -390,6 +413,16 @@ private:
 
     void OnPrint(wxCommandEvent&) {
         ShowPrintDialogForDocument(this, m_document, m_printData);
+    }
+
+    void ChangePage(int delta) {
+        const int nextPage = std::clamp(m_currentPage + delta, 1, m_pageCount);
+        if (nextPage == m_currentPage) {
+            return;
+        }
+
+        m_currentPage = nextPage;
+        UpdateOrientation();
     }
 
     PrintableDocument m_document;
