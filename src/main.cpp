@@ -1,13 +1,13 @@
 #include <wx/wx.h>
-#include <wx/dataview.h>
 #include <wx/fdrepdlg.h>
 #include <wx/textfile.h>
 #include <wx/filename.h>
 #include <wx/clipbrd.h>
+#include <wx/grid.h>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
-#include <algorithm>
 
 #include "about_dialog.h"
 #include "config.h"
@@ -84,57 +84,14 @@ bool ContainsText(const wxString& source, const wxString& target, bool matchCase
 
 } // namespace
 
-class CsvDataModel : public wxDataViewVirtualListModel {
-public:
-    void SetRows(std::vector<std::vector<wxString>> rows, unsigned int minimumColumnCount = 0) {
-        m_rows = std::move(rows);
-        m_columnCount = 0;
-        for (const auto& row : m_rows) {
-            m_columnCount = std::max(m_columnCount, static_cast<unsigned int>(row.size()));
-        }
-        m_columnCount = std::max(m_columnCount, minimumColumnCount);
-        Reset(m_rows.size());
-    }
-
-    unsigned int GetColumnCount() const override {
-        return m_columnCount;
-    }
-
-    wxString GetColumnType(unsigned int) const override {
-        return "string";
-    }
-
-    unsigned int GetCount() const override {
-        return static_cast<unsigned int>(m_rows.size());
-    }
-
-    void GetValueByRow(wxVariant& variant, unsigned int row, unsigned int col) const override {
-        variant = GetCellText(row, col);
-    }
-
-    bool SetValueByRow(const wxVariant&, unsigned int, unsigned int) override {
-        return false;
-    }
-
-    wxString GetCellText(unsigned int row, unsigned int col) const {
-        if (row < m_rows.size() && col < m_rows[row].size()) {
-            return m_rows[row][col];
-        }
-        return {};
-    }
-
-private:
-    std::vector<std::vector<wxString>> m_rows;
-    unsigned int m_columnCount{0};
-};
-
 class MainFrame : public wxFrame {
 public:
-    MainFrame(const wxString& initialFile)
+    explicit MainFrame(const wxString& initialFile)
         : wxFrame(nullptr, wxID_ANY, CSV_EXPLORER_NAME, wxDefaultPosition, wxSize(900, 600)) {
         BuildMenuBar();
         BuildAccelerators();
-        BuildDataView();
+        BuildGrid();
+        BuildStatusBar();
         ApplyWindowIcon();
         UpdateTitle();
         if (!initialFile.IsEmpty()) {
@@ -164,21 +121,30 @@ private:
         SetMenuBar(bar);
     }
 
-    void BuildDataView() {
-        m_dataView = new wxDataViewCtrl(
-            this,
-            wxID_ANY,
-            wxDefaultPosition,
-            wxDefaultSize,
-            wxDV_MULTIPLE);
+    void BuildGrid() {
+        m_grid = new wxGrid(this, wxID_ANY);
+        m_grid->CreateGrid(0, 0);
+        m_grid->EnableEditing(true);
+        m_grid->EnableDragRowSize(false);
+        m_grid->SetRowLabelSize(0);
+        m_grid->SetColLabelAlignment(wxALIGN_LEFT, wxALIGN_CENTER);
 
-        m_model = std::make_unique<CsvDataModel>();
-        m_dataView->AssociateModel(m_model.get());
+        m_grid->Bind(wxEVT_GRID_CELL_LEFT_DCLICK, &MainFrame::OnCellLeftDClick, this);
+        m_grid->Bind(wxEVT_GRID_CELL_RIGHT_CLICK, &MainFrame::OnCellRightClick, this);
+        m_grid->Bind(wxEVT_GRID_SELECT_CELL, &MainFrame::OnSelectCell, this);
+        m_grid->Bind(wxEVT_GRID_EDITOR_SHOWN, &MainFrame::OnEditorShown, this);
+        m_grid->Bind(wxEVT_CHAR_HOOK, &MainFrame::OnGridCharHook, this);
 
-        BuildColumns({});
         auto* sizer = new wxBoxSizer(wxVERTICAL);
-        sizer->Add(m_dataView, 1, wxEXPAND | wxALL, 0);
+        sizer->Add(m_grid, 1, wxEXPAND | wxALL, 0);
         SetSizer(sizer);
+    }
+
+    void BuildStatusBar() {
+        wxFrame::CreateStatusBar(2);
+        const int widths[] = { -1, FromDIP(180) };
+        GetStatusBar()->SetStatusWidths(2, widths);
+        UpdateStatusBar();
     }
 
     void BuildAccelerators() {
@@ -207,28 +173,78 @@ private:
         }
     }
 
-    void BuildColumns(const std::vector<wxString>& headers) {
-        while (m_dataView->GetColumnCount() > 0) {
-            m_dataView->DeleteColumn(m_dataView->GetColumn(0));
+    unsigned int GetColumnCount() const {
+        unsigned int columnCount = static_cast<unsigned int>(m_headers.size());
+        for (const auto& row : m_rows) {
+            columnCount = std::max(columnCount, static_cast<unsigned int>(row.size()));
         }
+        return columnCount;
+    }
 
-        const unsigned int columns = static_cast<unsigned int>(headers.size());
-        if (columns == 0) {
+    void NormalizeRows(unsigned int minimumColumnCount) {
+        unsigned int columnCount = std::max(GetColumnCount(), minimumColumnCount);
+        for (auto& row : m_rows) {
+            row.resize(columnCount);
+        }
+    }
+
+    void EnsureRowCount(int desiredRows) {
+        const int currentRows = m_grid->GetNumberRows();
+        if (currentRows < desiredRows) {
+            m_grid->AppendRows(desiredRows - currentRows);
+        } else if (currentRows > desiredRows) {
+            m_grid->DeleteRows(0, currentRows - desiredRows);
+        }
+    }
+
+    void EnsureColumnCount(int desiredColumns) {
+        const int currentColumns = m_grid->GetNumberCols();
+        if (currentColumns < desiredColumns) {
+            m_grid->AppendCols(desiredColumns - currentColumns);
+        } else if (currentColumns > desiredColumns) {
+            m_grid->DeleteCols(desiredColumns, currentColumns - desiredColumns);
+        }
+    }
+
+    wxString GetCellText(unsigned int row, unsigned int col) const {
+        if (row < m_rows.size() && col < m_rows[row].size()) {
+            return m_rows[row][col];
+        }
+        return {};
+    }
+
+    void SetCellText(unsigned int row, unsigned int col, const wxString& value) {
+        if (row >= m_rows.size()) {
             return;
         }
-        for (unsigned int i = 0; i < columns; ++i) {
-            auto* renderer = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_INERT);
-            const wxString title = (!headers.empty() && i < headers.size() && !headers[i].IsEmpty())
-                ? headers[i]
-                : wxString::Format("Column %u", i + 1);
-            auto* col = new wxDataViewColumn(
-                title,
-                renderer,
-                i,
-                160,
-                wxALIGN_LEFT,
-                wxDATAVIEW_COL_RESIZABLE);
-            m_dataView->AppendColumn(col);
+        if (col >= m_rows[row].size()) {
+            m_rows[row].resize(col + 1);
+        }
+        m_rows[row][col] = value;
+        if (row < static_cast<unsigned int>(m_grid->GetNumberRows()) && col < static_cast<unsigned int>(m_grid->GetNumberCols())) {
+            m_grid->SetCellValue(static_cast<int>(row), static_cast<int>(col), value);
+        }
+    }
+
+    void RefreshGridFromData() {
+        const int rows = static_cast<int>(m_rows.size());
+        const int columns = static_cast<int>(GetColumnCount());
+
+        EnsureColumnCount(columns);
+        EnsureRowCount(rows);
+
+        for (int col = 0; col < columns; ++col) {
+            wxString title = wxString::Format("Column %d", col + 1);
+            if (col < static_cast<int>(m_headers.size()) && !m_headers[col].IsEmpty()) {
+                title = m_headers[col];
+            }
+            m_grid->SetColLabelValue(col, title);
+        }
+
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < columns; ++col) {
+                m_grid->SetCellValue(row, col, GetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(col)));
+            }
         }
     }
 
@@ -238,6 +254,21 @@ private:
         } else {
             SetTitle(wxString::Format("%s - %s", CSV_EXPLORER_NAME, wxFileName(m_currentFile).GetFullName()));
         }
+    }
+
+    void UpdateStatusBar() {
+        if (!GetStatusBar()) {
+            return;
+        }
+
+        const int totalRows = static_cast<int>(m_rows.size());
+        const int selectedRow = m_grid ? m_grid->GetGridCursorRow() : -1;
+        wxString status = wxString::Format(
+            "Row %d of %d",
+            totalRows > 0 && selectedRow >= 0 ? selectedRow + 1 : 0,
+            totalRows);
+        SetStatusText({}, 0);
+        SetStatusText(status, 1);
     }
 
     void OpenFile(const wxString& path) {
@@ -252,20 +283,22 @@ private:
             return;
         }
 
-        m_model->SetRows(std::move(rows), static_cast<unsigned int>(headers.size()));
+        m_rows = std::move(rows);
         m_headers = std::move(headers);
-        BuildColumns(m_headers);
-        m_dataView->UnselectAll();
+        NormalizeRows(static_cast<unsigned int>(m_headers.size()));
+        RefreshGridFromData();
+        m_grid->ClearSelection();
 
         m_currentFile = path;
         m_lastFindValid = false;
         m_lastFindIndex = 0;
         UpdateTitle();
+        UpdateStatusBar();
         ResizeToCsvContent();
     }
 
     void ResizeToCsvContent() {
-        if (!m_dataView || !m_model || m_model->GetCount() == 0 || m_model->GetColumnCount() == 0) {
+        if (!m_grid || m_rows.empty() || GetColumnCount() == 0) {
             return;
         }
 
@@ -274,11 +307,11 @@ private:
         const int maxHeight = displaySize.GetHeight() * 66 / 100;
 
         wxClientDC dc(this);
-        dc.SetFont(m_dataView->GetFont());
+        dc.SetFont(m_grid->GetFont());
         const int charHeight = dc.GetTextExtent("M").GetHeight();
         const int rowHeight = std::max(22, charHeight + 8);
-        const unsigned int columns = m_model->GetColumnCount();
-        const unsigned int rows = m_model->GetCount();
+        const unsigned int columns = GetColumnCount();
+        const unsigned int rows = static_cast<unsigned int>(m_rows.size());
         const unsigned int sampleRows = std::min<unsigned int>(rows, 120u);
 
         int totalWidth = 0;
@@ -290,9 +323,13 @@ private:
 
             int colWidth = dc.GetTextExtent(header).GetWidth() + 32;
             for (unsigned int row = 0; row < sampleRows; ++row) {
-                colWidth = std::max(colWidth, dc.GetTextExtent(m_model->GetCellText(row, col)).GetWidth() + 32);
+                colWidth = std::max(colWidth, dc.GetTextExtent(GetCellText(row, col)).GetWidth() + 32);
             }
-            totalWidth += std::clamp(colWidth, 100, 400);
+            colWidth = std::clamp(colWidth, 100, 400);
+            totalWidth += colWidth;
+            if (col < static_cast<unsigned int>(m_grid->GetNumberCols())) {
+                m_grid->SetColSize(static_cast<int>(col), colWidth);
+            }
         }
 
         const int frameExtraX = GetSize().GetWidth() - GetClientSize().GetWidth();
@@ -302,7 +339,7 @@ private:
         const int headerHeight = rowHeight + 12;
         const unsigned int visibleRows = std::min<unsigned int>(rows, 24u);
 
-        int desiredWidth = totalWidth + frameExtraX + verticalScrollbar + 4;
+        int desiredWidth = totalWidth + frameExtraX + verticalScrollbar + m_grid->GetRowLabelSize() + 4;
         int desiredHeight = static_cast<int>(visibleRows * rowHeight + headerHeight + frameExtraY + horizontalScrollbar + 24);
 
         int newWidth = std::max(640, std::min(desiredWidth, maxWidth));
@@ -311,66 +348,73 @@ private:
         Centre();
     }
 
-    void CopySelection() {
-        wxDataViewItemArray selected;
-        m_dataView->GetSelections(selected);
-        if (selected.empty()) {
-            wxDataViewItem current = m_dataView->GetCurrentItem();
-            if (current.IsOk()) {
-                selected.push_back(current);
-            }
-        }
-        if (selected.empty()) {
-            return;
-        }
-
-        const unsigned int cols = m_model->GetColumnCount();
+    wxString GetBlockText(int topRow, int leftCol, int bottomRow, int rightCol) const {
         wxString output;
-        for (size_t i = 0; i < selected.size(); ++i) {
-            const unsigned int row = m_model->GetRow(selected[i]);
-            if (!output.empty()) {
+        for (int row = topRow; row <= bottomRow; ++row) {
+            if (!output.IsEmpty()) {
                 output << '\n';
             }
-            for (unsigned int col = 0; col < cols; ++col) {
-                if (col > 0) {
+            for (int col = leftCol; col <= rightCol; ++col) {
+                if (col > leftCol) {
                     output << '\t';
                 }
-                output << m_model->GetCellText(row, col);
+                output << GetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(col));
             }
         }
-        if (output.IsEmpty()) {
-            return;
-        }
-
-        CopyToClipboard(output);
+        return output;
     }
 
-    void CopyRow(const wxDataViewItem& item) {
-        if (!item.IsOk()) {
+    void CopySelection() {
+        const wxGridCellCoordsArray topLeft = m_grid->GetSelectionBlockTopLeft();
+        const wxGridCellCoordsArray bottomRight = m_grid->GetSelectionBlockBottomRight();
+        if (!topLeft.empty() && topLeft.size() == bottomRight.size()) {
+            CopyToClipboard(GetBlockText(
+                topLeft[0].GetRow(),
+                topLeft[0].GetCol(),
+                bottomRight[0].GetRow(),
+                bottomRight[0].GetCol()));
             return;
         }
-        const unsigned int row = m_model->GetRow(item);
-        const unsigned int cols = m_model->GetColumnCount();
-        wxString output;
-        for (unsigned int col = 0; col < cols; ++col) {
-            if (col > 0) {
-                output << '\t';
+
+        wxArrayInt selectedRows = m_grid->GetSelectedRows();
+        if (!selectedRows.empty()) {
+            wxString output;
+            for (size_t i = 0; i < selectedRows.size(); ++i) {
+                if (!output.IsEmpty()) {
+                    output << '\n';
+                }
+                output << GetBlockText(selectedRows[i], 0, selectedRows[i], m_grid->GetNumberCols() - 1);
             }
-            output << m_model->GetCellText(row, col);
+            CopyToClipboard(output);
+            return;
         }
-        CopyToClipboard(output);
+
+        wxGridCellCoordsArray selectedCells = m_grid->GetSelectedCells();
+        if (!selectedCells.empty()) {
+            const wxGridCellCoords& cell = selectedCells[0];
+            CopyToClipboard(GetCellText(static_cast<unsigned int>(cell.GetRow()), static_cast<unsigned int>(cell.GetCol())));
+            return;
+        }
+
+        const int row = m_grid->GetGridCursorRow();
+        const int col = m_grid->GetGridCursorCol();
+        if (row >= 0 && col >= 0) {
+            CopyToClipboard(GetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(col)));
+        }
     }
 
-    void CopyCell(const wxDataViewItem& item, int column) {
-        if (!item.IsOk()) {
+    void CopyRow(int row) {
+        if (row < 0 || row >= static_cast<int>(m_rows.size()) || m_grid->GetNumberCols() == 0) {
             return;
         }
-        if (column < 0 || column >= static_cast<int>(m_model->GetColumnCount())) {
+        CopyToClipboard(GetBlockText(row, 0, row, m_grid->GetNumberCols() - 1));
+    }
+
+    void CopyCell(int row, int column) {
+        if (row < 0 || column < 0) {
             return;
         }
-        const unsigned int row = m_model->GetRow(item);
-        const wxString output = m_model->GetCellText(row, static_cast<unsigned int>(column));
-        CopyToClipboard(output);
+        CopyToClipboard(GetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(column)));
     }
 
     void CopyToClipboard(const wxString& output) {
@@ -384,51 +428,84 @@ private:
         }
     }
 
-    void OnContextCopyRow(wxCommandEvent&) {
-        wxDataViewItem item = m_dataView->GetCurrentItem();
-        if (m_contextItem.IsOk()) {
-            item = m_contextItem;
+    void CommitActiveEdit() {
+        if (!m_grid->IsCellEditControlShown()) {
+            return;
         }
-        CopyRow(item);
+
+        const int row = m_grid->GetGridCursorRow();
+        const int col = m_grid->GetGridCursorCol();
+        m_grid->SaveEditControlValue();
+        const wxString value = m_grid->GetCellValue(row, col);
+        m_grid->HideCellEditControl();
+        m_grid->DisableCellEditControl();
+        SetCellText(static_cast<unsigned int>(row), static_cast<unsigned int>(col), value);
+    }
+
+    void AppendEmptyRow() {
+        m_rows.emplace_back(GetColumnCount());
+        RefreshGridFromData();
+        UpdateStatusBar();
+    }
+
+    void MoveToNextEditableCell() {
+        if (m_grid->GetNumberCols() == 0) {
+            return;
+        }
+
+        const int currentRow = m_grid->GetGridCursorRow();
+        const int currentCol = m_grid->GetGridCursorCol();
+        int nextRow = currentRow;
+        int nextCol = currentCol + 1;
+
+        if (nextCol >= m_grid->GetNumberCols()) {
+            nextCol = 0;
+            ++nextRow;
+        }
+
+        if (nextRow >= m_grid->GetNumberRows()) {
+            AppendEmptyRow();
+        }
+
+        SelectCell(static_cast<unsigned int>(nextRow), static_cast<unsigned int>(nextCol));
+        m_grid->EnableCellEditControl();
+    }
+
+    void OnContextCopyRow(wxCommandEvent&) {
+        int row = m_contextRow;
+        if (row < 0) {
+            row = m_grid->GetGridCursorRow();
+        }
+        CopyRow(row);
     }
 
     void OnContextCopyCell(wxCommandEvent&) {
+        int row = m_contextRow;
         int col = m_contextColumn;
-        wxDataViewItem item = m_dataView->GetCurrentItem();
-        if (m_contextItem.IsOk()) {
-            item = m_contextItem;
+        if (row < 0) {
+            row = m_grid->GetGridCursorRow();
         }
-        if (col < 0 && item.IsOk()) {
-            col = m_dataView->GetColumnPosition(m_dataView->GetCurrentColumn());
+        if (col < 0) {
+            col = m_grid->GetGridCursorCol();
         }
-        CopyCell(item, col);
+        CopyCell(row, col);
     }
 
-    void OnContextMenu(wxDataViewEvent& event) {
-        m_contextItem = event.GetItem();
-        m_contextColumn = event.GetColumn();
-
-        if (!m_contextItem.IsOk()) {
-            m_contextItem = m_dataView->GetCurrentItem();
-        }
-
+    void ShowContextMenu(const wxPoint& position) {
         wxMenu menu;
         menu.Append(ID_CONTEXT_COPY_ROW, "&Copy row");
         menu.Append(ID_CONTEXT_COPY_CELL, "Copy &cell");
-        const bool hasTarget = m_contextItem.IsOk();
+        const bool hasTarget = m_contextRow >= 0;
         menu.Enable(ID_CONTEXT_COPY_ROW, hasTarget);
-        menu.Enable(ID_CONTEXT_COPY_CELL, hasTarget);
-
-        const int x = wxGetMousePosition().x;
-        const int y = wxGetMousePosition().y;
-        m_dataView->PopupMenu(&menu, m_dataView->ScreenToClient(wxPoint(x, y)));
+        menu.Enable(ID_CONTEXT_COPY_CELL, hasTarget && m_contextColumn >= 0);
+        m_grid->PopupMenu(&menu, position);
     }
 
     bool FindInData(bool forward) {
         const wxString query = m_findData.GetFindString();
         const bool matchCase = (m_findData.GetFlags() & wxFR_MATCHCASE) != 0;
-        const unsigned int rows = m_model->GetCount();
-        const unsigned int cols = m_model->GetColumnCount();
+        const unsigned int rows = static_cast<unsigned int>(m_rows.size());
+        const unsigned int cols = GetColumnCount();
         const size_t total = static_cast<size_t>(rows) * cols;
         if (query.IsEmpty() || total == 0) {
             return false;
@@ -451,7 +528,7 @@ private:
 
             const unsigned int row = static_cast<unsigned int>(linearIndex / cols);
             const unsigned int col = static_cast<unsigned int>(linearIndex % cols);
-            const wxString value = m_model->GetCellText(row, col);
+            const wxString value = GetCellText(row, col);
             if (ContainsText(value, query, matchCase)) {
                 SelectCell(row, col);
                 m_lastFindValid = true;
@@ -463,12 +540,12 @@ private:
     }
 
     void SelectCell(unsigned int row, unsigned int col) {
-        wxDataViewItem item = m_model->GetItem(row);
-        m_dataView->UnselectAll();
-        m_dataView->Select(item);
-        m_dataView->SetCurrentItem(item);
-        m_dataView->EnsureVisible(item);
-        m_dataView->SetFocus();
+        m_grid->ClearSelection();
+        m_grid->SetGridCursor(static_cast<int>(row), static_cast<int>(col));
+        m_grid->SelectBlock(static_cast<int>(row), static_cast<int>(col), static_cast<int>(row), static_cast<int>(col), false);
+        m_grid->MakeCellVisible(static_cast<int>(row), static_cast<int>(col));
+        m_grid->SetFocus();
+        UpdateStatusBar();
     }
 
     void OnOpen(wxCommandEvent&) {
@@ -541,31 +618,71 @@ private:
         ShowAboutDialog(this);
     }
 
+    void OnCellLeftDClick(wxGridEvent& event) {
+        SelectCell(static_cast<unsigned int>(event.GetRow()), static_cast<unsigned int>(event.GetCol()));
+        m_grid->EnableCellEditControl();
+    }
+
+    void OnCellRightClick(wxGridEvent& event) {
+        m_contextRow = event.GetRow();
+        m_contextColumn = event.GetCol();
+        m_grid->SetGridCursor(m_contextRow, m_contextColumn);
+        ShowContextMenu(event.GetPosition());
+    }
+
+    void OnEditorShown(wxGridEvent& event) {
+        m_contextRow = event.GetRow();
+        m_contextColumn = event.GetCol();
+        event.Skip();
+    }
+
+    void OnSelectCell(wxGridEvent& event) {
+        event.Skip();
+        UpdateStatusBar();
+    }
+
+    void OnGridCharHook(wxKeyEvent& event) {
+        if (!m_grid->IsCellEditControlShown()) {
+            event.Skip();
+            return;
+        }
+
+        const int keyCode = event.GetKeyCode();
+        if (keyCode == WXK_RETURN || keyCode == WXK_NUMPAD_ENTER) {
+            CommitActiveEdit();
+            return;
+        }
+
+        if (keyCode == WXK_TAB && !event.ShiftDown()) {
+            CommitActiveEdit();
+            MoveToNextEditableCell();
+            return;
+        }
+
+        event.Skip();
+    }
+
     void OnClose(wxCloseEvent& event) {
         if (m_findDialog) {
             m_findDialog->Destroy();
             m_findDialog = nullptr;
         }
-        if (m_dataView) {
-            m_dataView->AssociateModel(nullptr);
-        }
         event.Skip();
     }
 
 private:
-    std::unique_ptr<CsvDataModel> m_model;
-    wxDataViewCtrl* m_dataView{nullptr};
+    wxGrid* m_grid{nullptr};
+    std::vector<std::vector<wxString>> m_rows;
+    std::vector<wxString> m_headers;
     wxString m_currentFile;
     wxFindReplaceData m_findData{wxFR_DOWN};
     wxFindReplaceDialog* m_findDialog{nullptr};
     size_t m_lastFindIndex{0};
     bool m_lastFindValid{false};
-    std::vector<wxString> m_headers;
-    wxDataViewItem m_contextItem;
+    int m_contextRow{-1};
     int m_contextColumn{-1};
 
     wxDECLARE_EVENT_TABLE();
-
 };
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -578,7 +695,6 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_ABOUT, MainFrame::OnAbout)
     EVT_MENU(ID_CONTEXT_COPY_ROW, MainFrame::OnContextCopyRow)
     EVT_MENU(ID_CONTEXT_COPY_CELL, MainFrame::OnContextCopyCell)
-    EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, MainFrame::OnContextMenu)
     EVT_CLOSE(MainFrame::OnClose)
     EVT_FIND(wxID_ANY, MainFrame::OnFindDialog)
     EVT_FIND_NEXT(wxID_ANY, MainFrame::OnFindDialog)
