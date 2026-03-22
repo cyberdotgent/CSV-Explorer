@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    tags:
+      - 'v*'
 
 env:
   CCACHE_DIR: ~/.cache/ccache
