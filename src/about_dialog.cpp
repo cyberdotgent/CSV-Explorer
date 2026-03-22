@@ -1,7 +1,9 @@
 #include "about_dialog.h"
 
+#include <sqlite3.h>
 #include <wx/wx.h>
 #include <wx/hyperlink.h>
+#include <wx/statline.h>
 #include <wx/mstream.h>
 #include <wx/image.h>
 
@@ -9,6 +11,14 @@
 #include "csv_explorer_png_data.h"
 
 namespace {
+
+wxString GetWxWidgetsVersion() {
+    return wxString::Format("%d.%d.%d", wxMAJOR_VERSION, wxMINOR_VERSION, wxRELEASE_NUMBER);
+}
+
+wxString GetSqliteVersion() {
+    return wxString::FromUTF8(sqlite3_libversion());
+}
 
 wxBitmap LoadAppBitmap(int size) {
     wxMemoryInputStream stream(assets_csv_explorer_png, assets_csv_explorer_png_len);
@@ -67,6 +77,29 @@ public:
         details->Add(repositoryLink, 0, wxBOTTOM | wxALIGN_CENTER_HORIZONTAL, 4);
 
         root->Add(details, 1, wxALL | wxALIGN_CENTER_HORIZONTAL, 16);
+
+        root->Add(new wxStaticLine(this), 0, wxEXPAND | wxLEFT | wxRIGHT, 16);
+
+        auto* poweredBy = new wxBoxSizer(wxVERTICAL);
+
+        auto* poweredByTitle = new wxStaticText(this, wxID_ANY, "Powered by");
+        wxFont sectionFont = poweredByTitle->GetFont();
+        sectionFont.MakeBold();
+        poweredByTitle->SetFont(sectionFont);
+        poweredBy->Add(poweredByTitle, 0, wxBOTTOM | wxALIGN_CENTER_HORIZONTAL, 8);
+
+        auto addDependencyLabel = [this, poweredBy](const wxString& name, const wxString& version) {
+            poweredBy->Add(
+                new wxStaticText(this, wxID_ANY, wxString::Format("%s %s", name, version), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL),
+                0,
+                wxBOTTOM | wxALIGN_CENTER_HORIZONTAL,
+                4);
+        };
+
+        addDependencyLabel("wxWidgets", GetWxWidgetsVersion());
+        addDependencyLabel("SQLite", GetSqliteVersion());
+
+        root->Add(poweredBy, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 16);
 
         auto* closeButton = new wxButton(this, wxID_OK, "Close");
         closeButton->SetMinSize(FromDIP(wxSize(140, -1)));
