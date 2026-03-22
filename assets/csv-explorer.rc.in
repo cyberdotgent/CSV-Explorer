@@ -1,0 +1,36 @@
+#include <winres.h>
+
+IDI_APP_ICON ICON "@CSV_EXPLORER_ICON_PATH@"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION @CSV_EXPLORER_VERSION_COMMA@
+ PRODUCTVERSION @CSV_EXPLORER_VERSION_COMMA@
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS__WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "@CSV_EXPLORER_COMPANY@\0"
+            VALUE "FileDescription", "@CSV_EXPLORER_NAME@\0"
+            VALUE "FileVersion", "@CSV_EXPLORER_VERSION@\0"
+            VALUE "InternalName", "csv-explorer\0"
+            VALUE "LegalCopyright", "@CSV_EXPLORER_AUTHOR@\0"
+            VALUE "OriginalFilename", "csv-explorer.exe\0"
+            VALUE "ProductName", "@CSV_EXPLORER_NAME@\0"
+            VALUE "ProductVersion", "@CSV_EXPLORER_VERSION@\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END
