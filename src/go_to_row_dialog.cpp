@@ -25,7 +25,14 @@ public:
         rowSizer->Add(new wxStaticText(this, wxID_ANY, "Row"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
 
         wxTextValidator validator(wxFILTER_DIGITS);
-        m_rowInput = new wxTextCtrl(this, wxID_ANY, wxString::Format("%d", currentRow + 1), wxDefaultPosition, FromDIP(wxSize(140, -1)), 0, validator);
+        m_rowInput = new wxTextCtrl(
+            this,
+            wxID_ANY,
+            wxString::Format("%d", currentRow + 1),
+            wxDefaultPosition,
+            FromDIP(wxSize(140, -1)),
+            wxTE_PROCESS_ENTER,
+            validator);
         rowSizer->Add(m_rowInput, 1, wxEXPAND, 0);
         root->Add(rowSizer, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 16);
 
