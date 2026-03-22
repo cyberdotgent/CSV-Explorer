@@ -13,3 +13,4 @@ struct ImportedSqliteTable {
 };
 
 bool ShowSqliteImportDialog(wxWindow* parent, ImportedSqliteTable* importedTable);
+bool ShowSqliteExportDialog(wxWindow* parent, const ImportedSqliteTable& table);

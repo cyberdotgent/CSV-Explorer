@@ -35,6 +35,7 @@ enum {
     ID_GO_TO_LAST,
     ID_GO_TO_ROW,
     ID_IMPORT_SQLITE,
+    ID_EXPORT_SQLITE,
     ID_CONTEXT_COPY_ROW,
     ID_CONTEXT_COPY_CELL,
     ID_INSERT_ROW_BEFORE,
@@ -190,6 +191,7 @@ private:
     void OnCloseTab(wxCommandEvent&);
     void OnOpen(wxCommandEvent&);
     void OnImportFromSqlite(wxCommandEvent&);
+    void OnExportToSqlite(wxCommandEvent&);
     void OnSave(wxCommandEvent&);
     void OnSaveAs(wxCommandEvent&);
     void OnPrintPreview(wxCommandEvent&);
@@ -389,6 +391,9 @@ void MainFrame::BuildMenuBar() {
     auto* importMenu = new wxMenu();
     importMenu->Append(ID_IMPORT_SQLITE, "From &SQLite Database...");
     fileMenu->AppendSubMenu(importMenu, "&Import");
+    auto* exportMenu = new wxMenu();
+    exportMenu->Append(ID_EXPORT_SQLITE, "To S&QLite Database...");
+    fileMenu->AppendSubMenu(exportMenu, "E&xport");
     fileMenu->AppendSeparator();
     fileMenu->Append(wxID_SAVE, "&Save\tCtrl+S");
     fileMenu->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
@@ -494,6 +499,7 @@ void MainFrame::BuildNotebook() {
     Bind(wxEVT_MENU, &MainFrame::OnCloseTab, this, ID_CLOSE_TAB);
     Bind(wxEVT_MENU, &MainFrame::OnOpen, this, wxID_OPEN);
     Bind(wxEVT_MENU, &MainFrame::OnImportFromSqlite, this, ID_IMPORT_SQLITE);
+    Bind(wxEVT_MENU, &MainFrame::OnExportToSqlite, this, ID_EXPORT_SQLITE);
     Bind(wxEVT_MENU, &MainFrame::OnSave, this, wxID_SAVE);
     Bind(wxEVT_MENU, &MainFrame::OnSaveAs, this, wxID_SAVEAS);
     Bind(wxEVT_MENU, &MainFrame::OnPrintPreview, this, wxID_PREVIEW);
@@ -742,6 +748,21 @@ void MainFrame::OnImportFromSqlite(wxCommandEvent&) {
     }
 
     ImportTableInPreferredPage(GetActivePage(), importedTable);
+}
+
+void MainFrame::OnExportToSqlite(wxCommandEvent&) {
+    EditorPage* page = GetActivePage();
+    if (!page) {
+        return;
+    }
+
+    PrintableDocument document = page->BuildPrintableDocument();
+    ImportedSqliteTable exportedTable;
+    exportedTable.documentName = document.title;
+    exportedTable.headers = document.headers;
+    exportedTable.rows = document.rows;
+
+    ShowSqliteExportDialog(this, exportedTable);
 }
 
 void MainFrame::OnSave(wxCommandEvent&) {
