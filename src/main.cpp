@@ -461,6 +461,31 @@ private:
         UpdateStatusBar();
     }
 
+    bool IsEffectivelyEmptyDocument() const {
+        if (!m_currentFile.IsEmpty()) {
+            return false;
+        }
+
+        if (GetColumnCount() != 1 || m_headers.size() != 1) {
+            return false;
+        }
+
+        const wxString& header = m_headers[0];
+        if (!header.IsEmpty() && header != "New column" && header != "Column 1") {
+            return false;
+        }
+
+        for (const auto& row : m_rows) {
+            for (const auto& cell : row) {
+                if (!cell.IsEmpty()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     wxString GetDisplayFileName() const {
         if (!m_currentFile.IsEmpty()) {
             return wxFileName(m_currentFile).GetFullName();
@@ -656,6 +681,10 @@ private:
 
     bool ConfirmDirtyFileAction() {
         if (!m_isDirty) {
+            return true;
+        }
+
+        if (IsEffectivelyEmptyDocument()) {
             return true;
         }
 
