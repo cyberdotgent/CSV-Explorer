@@ -178,6 +178,10 @@ DirtyFileAction ShowDirtyFileDialog(wxWindow* parent, const wxString& documentNa
     dialog.SetAffirmativeId(wxID_YES);
     saveButton->SetDefault();
     saveButton->SetFocus();
+    saveButton->Bind(wxEVT_BUTTON, [&dialog](wxCommandEvent&) { dialog.EndModal(wxID_YES); });
+    saveAsButton->Bind(wxEVT_BUTTON, [&dialog](wxCommandEvent&) { dialog.EndModal(wxID_APPLY); });
+    discardButton->Bind(wxEVT_BUTTON, [&dialog](wxCommandEvent&) { dialog.EndModal(wxID_NO); });
+    cancelButton->Bind(wxEVT_BUTTON, [&dialog](wxCommandEvent&) { dialog.EndModal(wxID_CANCEL); });
 
     const int result = dialog.ShowModal();
     if (result == wxID_YES) {
