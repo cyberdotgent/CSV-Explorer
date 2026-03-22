@@ -148,6 +148,14 @@ private:
 
         auto* editMenu = new wxMenu();
         editMenu->Append(wxID_COPY, "&Copy\tCtrl+C");
+        auto* insertMenu = new wxMenu();
+        insertMenu->Append(ID_INSERT_ROW_BEFORE, "Insert row &before");
+        insertMenu->Append(ID_INSERT_ROW_AFTER, "Insert row &after");
+        insertMenu->AppendSeparator();
+        insertMenu->Append(ID_INSERT_COLUMN_BEFORE, "Insert column &before");
+        insertMenu->Append(ID_INSERT_COLUMN_AFTER, "Insert column &after");
+        editMenu->AppendSubMenu(insertMenu, "&Insert");
+        editMenu->AppendSeparator();
         editMenu->Append(wxID_FIND, "&Find...\tCtrl+F");
         editMenu->Append(ID_FIND_NEXT, "Find &Next\tCtrl+G");
         editMenu->Append(ID_FIND_PREVIOUS, "Find &Previous\tShift+Ctrl+G");
@@ -354,6 +362,20 @@ private:
         m_isDirty = dirty;
         UpdateTitle();
         UpdateStatusBar();
+    }
+
+    int GetActiveRowIndex() const {
+        if (m_contextRow >= 0) {
+            return m_contextRow;
+        }
+        return m_grid ? m_grid->GetGridCursorRow() : -1;
+    }
+
+    int GetActiveColumnIndex() const {
+        if (m_contextColumn >= 0) {
+            return m_contextColumn;
+        }
+        return m_grid ? m_grid->GetGridCursorCol() : -1;
     }
 
     wxRect GetHeaderRect(int col) const {
@@ -738,46 +760,40 @@ private:
     }
 
     void OnContextCopyRow(wxCommandEvent&) {
-        int row = m_contextRow;
-        if (row < 0) {
-            row = m_grid->GetGridCursorRow();
-        }
-        CopyRow(row);
+        CopyRow(GetActiveRowIndex());
     }
 
     void OnContextCopyCell(wxCommandEvent&) {
-        int row = m_contextRow;
-        int col = m_contextColumn;
-        if (row < 0) {
-            row = m_grid->GetGridCursorRow();
-        }
-        if (col < 0) {
-            col = m_grid->GetGridCursorCol();
-        }
+        const int row = GetActiveRowIndex();
+        const int col = GetActiveColumnIndex();
         CopyCell(row, col);
     }
 
     void OnInsertColumnBefore(wxCommandEvent&) {
-        if (m_contextColumn >= 0) {
-            InsertColumn(m_contextColumn);
+        const int col = GetActiveColumnIndex();
+        if (col >= 0) {
+            InsertColumn(col);
         }
     }
 
     void OnInsertColumnAfter(wxCommandEvent&) {
-        if (m_contextColumn >= 0) {
-            InsertColumn(m_contextColumn + 1);
+        const int col = GetActiveColumnIndex();
+        if (col >= 0) {
+            InsertColumn(col + 1);
         }
     }
 
     void OnInsertRowBefore(wxCommandEvent&) {
-        if (m_contextRow >= 0) {
-            InsertRow(m_contextRow);
+        const int row = GetActiveRowIndex();
+        if (row >= 0) {
+            InsertRow(row);
         }
     }
 
     void OnInsertRowAfter(wxCommandEvent&) {
-        if (m_contextRow >= 0) {
-            InsertRow(m_contextRow + 1);
+        const int row = GetActiveRowIndex();
+        if (row >= 0) {
+            InsertRow(row + 1);
         }
     }
 
