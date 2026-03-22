@@ -20,6 +20,8 @@ enum {
     ID_FIND_PREVIOUS,
     ID_CONTEXT_COPY_ROW,
     ID_CONTEXT_COPY_CELL,
+    ID_INSERT_ROW_BEFORE,
+    ID_INSERT_ROW_AFTER,
     ID_INSERT_COLUMN_BEFORE,
     ID_INSERT_COLUMN_AFTER
 };
@@ -695,6 +697,23 @@ private:
         BeginHeaderEdit(insertAt);
     }
 
+    void InsertRow(int insertAt) {
+        CommitHeaderEdit();
+        CommitActiveEdit();
+
+        insertAt = std::clamp(insertAt, 0, static_cast<int>(m_rows.size()));
+        m_rows.insert(m_rows.begin() + insertAt, std::vector<wxString>(GetColumnCount(), wxString()));
+
+        RefreshGridFromData();
+        UpdateStatusBar();
+        SetDirty(true);
+
+        if (GetColumnCount() > 0) {
+            SelectCell(static_cast<unsigned int>(insertAt), 0);
+            m_grid->EnableCellEditControl();
+        }
+    }
+
     void MoveToNextEditableCell() {
         if (m_grid->GetNumberCols() == 0) {
             return;
@@ -750,13 +769,30 @@ private:
         }
     }
 
+    void OnInsertRowBefore(wxCommandEvent&) {
+        if (m_contextRow >= 0) {
+            InsertRow(m_contextRow);
+        }
+    }
+
+    void OnInsertRowAfter(wxCommandEvent&) {
+        if (m_contextRow >= 0) {
+            InsertRow(m_contextRow + 1);
+        }
+    }
+
     void ShowContextMenu(const wxPoint& position) {
         wxMenu menu;
         menu.Append(ID_CONTEXT_COPY_ROW, "&Copy row");
         menu.Append(ID_CONTEXT_COPY_CELL, "Copy &cell");
+        menu.AppendSeparator();
+        menu.Append(ID_INSERT_ROW_BEFORE, "Insert row &before");
+        menu.Append(ID_INSERT_ROW_AFTER, "Insert row &after");
         const bool hasTarget = m_contextRow >= 0;
         menu.Enable(ID_CONTEXT_COPY_ROW, hasTarget);
         menu.Enable(ID_CONTEXT_COPY_CELL, hasTarget && m_contextColumn >= 0);
+        menu.Enable(ID_INSERT_ROW_BEFORE, hasTarget);
+        menu.Enable(ID_INSERT_ROW_AFTER, hasTarget);
         m_grid->PopupMenu(&menu, position);
     }
 
@@ -1038,6 +1074,8 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_ABOUT, MainFrame::OnAbout)
     EVT_MENU(ID_CONTEXT_COPY_ROW, MainFrame::OnContextCopyRow)
     EVT_MENU(ID_CONTEXT_COPY_CELL, MainFrame::OnContextCopyCell)
+    EVT_MENU(ID_INSERT_ROW_BEFORE, MainFrame::OnInsertRowBefore)
+    EVT_MENU(ID_INSERT_ROW_AFTER, MainFrame::OnInsertRowAfter)
     EVT_MENU(ID_INSERT_COLUMN_BEFORE, MainFrame::OnInsertColumnBefore)
     EVT_MENU(ID_INSERT_COLUMN_AFTER, MainFrame::OnInsertColumnAfter)
     EVT_CLOSE(MainFrame::OnClose)
