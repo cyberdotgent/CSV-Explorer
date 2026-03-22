@@ -553,7 +553,7 @@ public:
             "SQLite files (*.db;*.sqlite;*.sqlite3)|*.db;*.sqlite;*.sqlite3|All files (*.*)|*.*",
             wxDefaultPosition,
             wxDefaultSize,
-            wxFLP_SAVE | wxFLP_USE_TEXTCTRL);
+            wxFLP_SAVE);
         topSizer->Add(m_databasePicker, 0, wxEXPAND | wxALL, FromDIP(12));
 
         auto* tableLabel = new wxStaticText(this, wxID_ANY, "Table name");
