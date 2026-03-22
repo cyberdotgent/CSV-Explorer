@@ -6,6 +6,9 @@
 #include <wx/filename.h>
 #include <wx/grid.h>
 #include <wx/notebook.h>
+#ifdef __WXOSX__
+#include <wx/osx/menu.h>
+#endif
 #include <wx/textfile.h>
 
 #include <algorithm>
@@ -363,6 +366,10 @@ MainFrame::MainFrame(const wxString& initialFile)
 }
 
 void MainFrame::BuildMenuBar() {
+#ifdef __WXOSX__
+    wxMenuBar::SetAutoWindowMenu(false);
+#endif
+
     auto* fileMenu = new wxMenu();
     fileMenu->Append(wxID_NEW, "&New...\tCtrl+N");
     fileMenu->Append(wxID_OPEN, "&Open...\tCtrl+O");
