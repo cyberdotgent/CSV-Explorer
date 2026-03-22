@@ -19,7 +19,9 @@ enum {
     ID_FIND_NEXT = wxID_HIGHEST + 1,
     ID_FIND_PREVIOUS,
     ID_CONTEXT_COPY_ROW,
-    ID_CONTEXT_COPY_CELL
+    ID_CONTEXT_COPY_CELL,
+    ID_INSERT_COLUMN_BEFORE,
+    ID_INSERT_COLUMN_AFTER
 };
 
 std::vector<wxString> ParseCsvLine(const wxString& line) {
@@ -163,15 +165,31 @@ private:
         m_grid->CreateGrid(0, 0);
         m_grid->EnableEditing(true);
         m_grid->EnableDragRowSize(false);
+        m_grid->EnableDragColSize(true);
         m_grid->SetRowLabelSize(0);
         m_grid->SetColLabelAlignment(wxALIGN_LEFT, wxALIGN_CENTER);
 
         m_grid->Bind(wxEVT_GRID_CELL_LEFT_DCLICK, &MainFrame::OnCellLeftDClick, this);
         m_grid->Bind(wxEVT_GRID_CELL_RIGHT_CLICK, &MainFrame::OnCellRightClick, this);
+        m_grid->Bind(wxEVT_GRID_LABEL_LEFT_DCLICK, &MainFrame::OnLabelLeftDClick, this);
+        m_grid->Bind(wxEVT_GRID_LABEL_RIGHT_CLICK, &MainFrame::OnLabelRightClick, this);
         m_grid->Bind(wxEVT_GRID_SELECT_CELL, &MainFrame::OnSelectCell, this);
         m_grid->Bind(wxEVT_GRID_CELL_CHANGED, &MainFrame::OnCellChanged, this);
         m_grid->Bind(wxEVT_GRID_EDITOR_SHOWN, &MainFrame::OnEditorShown, this);
         m_grid->Bind(wxEVT_CHAR_HOOK, &MainFrame::OnGridCharHook, this);
+        m_grid->Bind(wxEVT_SIZE, &MainFrame::OnGridResized, this);
+
+        m_headerEditor = new wxTextCtrl(
+            m_grid->GetGridColLabelWindow(),
+            wxID_ANY,
+            {},
+            wxDefaultPosition,
+            wxDefaultSize,
+            wxTE_PROCESS_ENTER);
+        m_headerEditor->Hide();
+        m_headerEditor->Bind(wxEVT_TEXT_ENTER, &MainFrame::OnHeaderEditorEnter, this);
+        m_headerEditor->Bind(wxEVT_KILL_FOCUS, &MainFrame::OnHeaderEditorKillFocus, this);
+        m_headerEditor->Bind(wxEVT_CHAR_HOOK, &MainFrame::OnHeaderEditorCharHook, this);
 
         auto* sizer = new wxBoxSizer(wxVERTICAL);
         sizer->Add(m_grid, 1, wxEXPAND | wxALL, 0);
@@ -223,6 +241,7 @@ private:
 
     void NormalizeRows(unsigned int minimumColumnCount) {
         unsigned int columnCount = std::max(GetColumnCount(), minimumColumnCount);
+        m_headers.resize(columnCount);
         for (auto& row : m_rows) {
             row.resize(columnCount);
         }
@@ -289,6 +308,7 @@ private:
         }
 
         m_isRefreshingGrid = false;
+        RepositionHeaderEditor();
     }
 
     void UpdateTitle() {
@@ -333,6 +353,84 @@ private:
         UpdateStatusBar();
     }
 
+    wxRect GetHeaderRect(int col) const {
+        if (!m_grid || col < 0 || col >= m_grid->GetNumberCols()) {
+            return {};
+        }
+
+        int x = 0;
+        for (int i = 0; i < col; ++i) {
+            x += m_grid->GetColSize(i);
+        }
+
+        const int scrollOffset = m_grid->GetScrollPos(wxHORIZONTAL) * m_grid->GetScrollLineX();
+        x -= scrollOffset;
+
+        return wxRect(x, 0, m_grid->GetColSize(col), m_grid->GetColLabelSize());
+    }
+
+    void RepositionHeaderEditor() {
+        if (!m_headerEditor || m_activeHeaderColumn < 0) {
+            return;
+        }
+
+        const wxRect rect = GetHeaderRect(m_activeHeaderColumn);
+        if (rect.width <= 0 || rect.height <= 0) {
+            m_headerEditor->Hide();
+            return;
+        }
+
+        const int inset = FromDIP(1);
+        m_headerEditor->SetSize(
+            rect.x + inset,
+            rect.y + inset,
+            std::max(10, rect.width - inset * 2),
+            std::max(10, rect.height - inset * 2));
+        m_headerEditor->Show();
+        m_headerEditor->Raise();
+    }
+
+    void BeginHeaderEdit(int col) {
+        if (!m_headerEditor || col < 0 || col >= static_cast<int>(GetColumnCount())) {
+            return;
+        }
+
+        CommitActiveEdit();
+        m_activeHeaderColumn = col;
+        m_headerEditor->ChangeValue(m_headers[col]);
+        RepositionHeaderEditor();
+        m_headerEditor->SetFocus();
+        m_headerEditor->SelectAll();
+    }
+
+    void CommitHeaderEdit() {
+        if (!m_headerEditor || m_activeHeaderColumn < 0) {
+            return;
+        }
+
+        const int col = m_activeHeaderColumn;
+        const wxString updatedValue = m_headerEditor->GetValue();
+        m_headerEditor->Hide();
+        m_activeHeaderColumn = -1;
+
+        if (col >= static_cast<int>(m_headers.size()) || m_headers[col] == updatedValue) {
+            return;
+        }
+
+        m_headers[col] = updatedValue;
+        m_grid->SetColLabelValue(col, updatedValue.IsEmpty() ? wxString::Format("Column %d", col + 1) : updatedValue);
+        SetDirty(true);
+    }
+
+    void CancelHeaderEdit() {
+        if (!m_headerEditor) {
+            return;
+        }
+
+        m_headerEditor->Hide();
+        m_activeHeaderColumn = -1;
+    }
+
     void SyncCellFromGrid(int row, int col) {
         if (row < 0 || col < 0 || row >= static_cast<int>(m_rows.size())) {
             return;
@@ -348,6 +446,7 @@ private:
     }
 
     bool SaveToPath(const wxString& path) {
+        CommitHeaderEdit();
         CommitActiveEdit();
 
         wxFFile file(path, "w");
@@ -400,6 +499,7 @@ private:
     }
 
     void OpenFile(const wxString& path) {
+        CancelHeaderEdit();
         std::vector<std::vector<wxString>> rows;
         std::vector<wxString> headers;
         if (!wxFileExists(path)) {
@@ -577,6 +677,23 @@ private:
         UpdateStatusBar();
     }
 
+    void InsertColumn(int insertAt) {
+        CommitHeaderEdit();
+        CommitActiveEdit();
+
+        insertAt = std::clamp(insertAt, 0, static_cast<int>(GetColumnCount()));
+        m_headers.insert(m_headers.begin() + insertAt, "New column");
+        for (auto& row : m_rows) {
+            row.insert(row.begin() + insertAt, {});
+        }
+
+        NormalizeRows(static_cast<unsigned int>(m_headers.size()));
+        RefreshGridFromData();
+        ResizeToCsvContent();
+        SetDirty(true);
+        BeginHeaderEdit(insertAt);
+    }
+
     void MoveToNextEditableCell() {
         if (m_grid->GetNumberCols() == 0) {
             return;
@@ -620,6 +737,18 @@ private:
         CopyCell(row, col);
     }
 
+    void OnInsertColumnBefore(wxCommandEvent&) {
+        if (m_contextColumn >= 0) {
+            InsertColumn(m_contextColumn);
+        }
+    }
+
+    void OnInsertColumnAfter(wxCommandEvent&) {
+        if (m_contextColumn >= 0) {
+            InsertColumn(m_contextColumn + 1);
+        }
+    }
+
     void ShowContextMenu(const wxPoint& position) {
         wxMenu menu;
         menu.Append(ID_CONTEXT_COPY_ROW, "&Copy row");
@@ -628,6 +757,16 @@ private:
         menu.Enable(ID_CONTEXT_COPY_ROW, hasTarget);
         menu.Enable(ID_CONTEXT_COPY_CELL, hasTarget && m_contextColumn >= 0);
         m_grid->PopupMenu(&menu, position);
+    }
+
+    void ShowHeaderContextMenu(const wxPoint& position) {
+        wxMenu menu;
+        menu.Append(ID_INSERT_COLUMN_BEFORE, "Insert column &before");
+        menu.Append(ID_INSERT_COLUMN_AFTER, "Insert column &after");
+        const bool hasTarget = m_contextColumn >= 0;
+        menu.Enable(ID_INSERT_COLUMN_BEFORE, hasTarget);
+        menu.Enable(ID_INSERT_COLUMN_AFTER, hasTarget);
+        m_grid->GetGridColLabelWindow()->PopupMenu(&menu, position);
     }
 
     bool FindInData(bool forward) {
@@ -756,15 +895,36 @@ private:
     }
 
     void OnCellLeftDClick(wxGridEvent& event) {
+        CommitHeaderEdit();
         SelectCell(static_cast<unsigned int>(event.GetRow()), static_cast<unsigned int>(event.GetCol()));
         m_grid->EnableCellEditControl();
     }
 
     void OnCellRightClick(wxGridEvent& event) {
+        CancelHeaderEdit();
         m_contextRow = event.GetRow();
         m_contextColumn = event.GetCol();
         m_grid->SetGridCursor(m_contextRow, m_contextColumn);
         ShowContextMenu(event.GetPosition());
+    }
+
+    void OnLabelLeftDClick(wxGridEvent& event) {
+        if (event.GetRow() == -1 && event.GetCol() >= 0) {
+            BeginHeaderEdit(event.GetCol());
+            return;
+        }
+        event.Skip();
+    }
+
+    void OnLabelRightClick(wxGridEvent& event) {
+        if (event.GetRow() == -1 && event.GetCol() >= 0) {
+            CommitActiveEdit();
+            m_contextRow = -1;
+            m_contextColumn = event.GetCol();
+            ShowHeaderContextMenu(event.GetPosition());
+            return;
+        }
+        event.Skip();
     }
 
     void OnEditorShown(wxGridEvent& event) {
@@ -781,11 +941,17 @@ private:
     }
 
     void OnSelectCell(wxGridEvent& event) {
+        CommitHeaderEdit();
         event.Skip();
         UpdateStatusBar();
     }
 
     void OnGridCharHook(wxKeyEvent& event) {
+        if (m_activeHeaderColumn >= 0) {
+            event.Skip();
+            return;
+        }
+
         if (!m_grid->IsCellEditControlShown()) {
             event.Skip();
             return;
@@ -807,6 +973,7 @@ private:
     }
 
     void OnClose(wxCloseEvent& event) {
+        CommitHeaderEdit();
         if (m_findDialog) {
             m_findDialog->Destroy();
             m_findDialog = nullptr;
@@ -814,8 +981,34 @@ private:
         event.Skip();
     }
 
+    void OnHeaderEditorEnter(wxCommandEvent&) {
+        CommitHeaderEdit();
+        m_grid->SetFocus();
+    }
+
+    void OnHeaderEditorKillFocus(wxFocusEvent& event) {
+        CommitHeaderEdit();
+        event.Skip();
+    }
+
+    void OnHeaderEditorCharHook(wxKeyEvent& event) {
+        if (event.GetKeyCode() == WXK_ESCAPE) {
+            CancelHeaderEdit();
+            m_grid->SetFocus();
+            return;
+        }
+
+        event.Skip();
+    }
+
+    void OnGridResized(wxSizeEvent& event) {
+        RepositionHeaderEditor();
+        event.Skip();
+    }
+
 private:
     wxGrid* m_grid{nullptr};
+    wxTextCtrl* m_headerEditor{nullptr};
     std::vector<std::vector<wxString>> m_rows;
     std::vector<wxString> m_headers;
     wxString m_currentFile;
@@ -827,6 +1020,7 @@ private:
     bool m_isRefreshingGrid{false};
     int m_contextRow{-1};
     int m_contextColumn{-1};
+    int m_activeHeaderColumn{-1};
 
     wxDECLARE_EVENT_TABLE();
 };
@@ -843,6 +1037,8 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_ABOUT, MainFrame::OnAbout)
     EVT_MENU(ID_CONTEXT_COPY_ROW, MainFrame::OnContextCopyRow)
     EVT_MENU(ID_CONTEXT_COPY_CELL, MainFrame::OnContextCopyCell)
+    EVT_MENU(ID_INSERT_COLUMN_BEFORE, MainFrame::OnInsertColumnBefore)
+    EVT_MENU(ID_INSERT_COLUMN_AFTER, MainFrame::OnInsertColumnAfter)
     EVT_CLOSE(MainFrame::OnClose)
     EVT_FIND(wxID_ANY, MainFrame::OnFindDialog)
     EVT_FIND_NEXT(wxID_ANY, MainFrame::OnFindDialog)
