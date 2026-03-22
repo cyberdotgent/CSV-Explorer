@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(CSVExplorer VERSION 0.2.0 LANGUAGES CXX)
+project(CSVExplorer VERSION 0.3.0 LANGUAGES CXX)
 
-set(CSV_EXPLORER_VERSION "0.2")
+set(CSV_EXPLORER_VERSION "${PROJECT_VERSION}")
 set(CSV_EXPLORER_LICENSE "MIT")
 set(CSV_EXPLORER_AUTHOR "Yvan Janssens")
+set(CSV_EXPLORER_COMPANY "Cyber.Gent")
 set(CSV_EXPLORER_REPOSITORY_URL "https://github.com/cyberdotgent/CSV-Explorer")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,11 +54,21 @@ configure_file(
     @ONLY
 )
 
+set(CSV_EXPLORER_VERSION_COMMA "${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0")
+set(CSV_EXPLORER_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/assets/csv-explorer.ico")
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/assets/csv-explorer.rc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/csv-explorer.rc
+    @ONLY
+)
+
 add_executable(csv_explorer
     src/about_dialog.cpp
     src/go_to_row_dialog.cpp
     src/main.cpp
+    src/main_frame.cpp
     src/print_support.cpp
+    src/unsaved_changes_dialog.cpp
 )
 
 set_target_properties(csv_explorer PROPERTIES
@@ -164,5 +175,5 @@ endif()
 
 if(WIN32)
     set_target_properties(csv_explorer PROPERTIES WIN32_EXECUTABLE TRUE)
-    target_sources(csv_explorer PRIVATE assets/csv-explorer.rc)
+    target_sources(csv_explorer PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/csv-explorer.rc)
 endif()
