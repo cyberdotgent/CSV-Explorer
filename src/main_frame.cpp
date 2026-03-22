@@ -24,6 +24,7 @@ namespace {
 enum {
     ID_NEW_TAB = wxID_HIGHEST + 1,
     ID_CLOSE_TAB,
+    ID_CLOSE_WINDOW,
     ID_FIND_NEXT,
     ID_FIND_PREVIOUS,
     ID_GO_TO_FIRST,
@@ -178,6 +179,7 @@ private:
 
     void OnNewWindow(wxCommandEvent&);
     void OnNewTab(wxCommandEvent&);
+    void OnCloseWindow(wxCommandEvent&);
     void OnCloseTab(wxCommandEvent&);
     void OnOpen(wxCommandEvent&);
     void OnSave(wxCommandEvent&);
@@ -362,9 +364,7 @@ MainFrame::MainFrame(const wxString& initialFile)
 
 void MainFrame::BuildMenuBar() {
     auto* fileMenu = new wxMenu();
-    fileMenu->Append(wxID_NEW, "&New Window\tCtrl+N");
-    fileMenu->Append(ID_NEW_TAB, "New &Tab\tCtrl+T");
-    fileMenu->Append(ID_CLOSE_TAB, "&Close Tab\tCtrl+W");
+    fileMenu->Append(wxID_NEW, "&New...\tCtrl+N");
     fileMenu->Append(wxID_OPEN, "&Open...\tCtrl+O");
     fileMenu->AppendSeparator();
     fileMenu->Append(wxID_SAVE, "&Save\tCtrl+S");
@@ -402,12 +402,20 @@ void MainFrame::BuildMenuBar() {
     editMenu->Append(ID_FIND_NEXT, "Find &Next\tF3");
     editMenu->Append(ID_FIND_PREVIOUS, "Find &Previous\tShift+F3");
 
+    auto* windowMenu = new wxMenu();
+    windowMenu->Append(wxID_NEW, "New &Window\tCtrl+N");
+    windowMenu->Append(ID_CLOSE_WINDOW, "Close &Window\tCtrl+Shift+W");
+    windowMenu->AppendSeparator();
+    windowMenu->Append(ID_NEW_TAB, "New &Tab\tCtrl+T");
+    windowMenu->Append(ID_CLOSE_TAB, "Close &Tab\tCtrl+W");
+
     auto* helpMenu = new wxMenu();
     helpMenu->Append(wxID_ABOUT, "&About");
 
     auto* bar = new wxMenuBar();
     bar->Append(fileMenu, "&File");
     bar->Append(editMenu, "&Edit");
+    bar->Append(windowMenu, "&Window");
     bar->Append(helpMenu, "&Help");
     SetMenuBar(bar);
 }
@@ -417,6 +425,7 @@ void MainFrame::BuildAccelerators() {
         { wxACCEL_CTRL, 'N', wxID_NEW },
         { wxACCEL_CTRL, 'T', ID_NEW_TAB },
         { wxACCEL_CTRL, 'W', ID_CLOSE_TAB },
+        { wxACCEL_CTRL | wxACCEL_SHIFT, 'W', ID_CLOSE_WINDOW },
         { wxACCEL_CTRL, 'O', wxID_OPEN },
         { wxACCEL_CTRL, 'S', wxID_SAVE },
         { wxACCEL_CTRL | wxACCEL_SHIFT, 'S', wxID_SAVEAS },
@@ -449,6 +458,7 @@ void MainFrame::BuildNotebook() {
 
     Bind(wxEVT_MENU, &MainFrame::OnNewWindow, this, wxID_NEW);
     Bind(wxEVT_MENU, &MainFrame::OnNewTab, this, ID_NEW_TAB);
+    Bind(wxEVT_MENU, &MainFrame::OnCloseWindow, this, ID_CLOSE_WINDOW);
     Bind(wxEVT_MENU, &MainFrame::OnCloseTab, this, ID_CLOSE_TAB);
     Bind(wxEVT_MENU, &MainFrame::OnOpen, this, wxID_OPEN);
     Bind(wxEVT_MENU, &MainFrame::OnSave, this, wxID_SAVE);
@@ -636,6 +646,10 @@ void MainFrame::OnNewWindow(wxCommandEvent&) {
 
 void MainFrame::OnNewTab(wxCommandEvent&) {
     CreateBlankTab(true, true);
+}
+
+void MainFrame::OnCloseWindow(wxCommandEvent&) {
+    Close();
 }
 
 void MainFrame::OnCloseTab(wxCommandEvent&) {
