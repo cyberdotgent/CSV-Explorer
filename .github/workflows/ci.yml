@@ -154,10 +154,12 @@ jobs:
           name: csv-explorer-windows
           path: build/windows-mingw64/csv-explorer.exe
 
-  release-windows:
-    name: Publish Windows binary on tag
+  release-binaries:
+    name: Publish release binaries on tag
     if: startsWith(github.ref, 'refs/tags/')
-    needs: windows-mingw
+    needs:
+      - windows-mingw
+      - macos
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -168,7 +170,15 @@ jobs:
           name: csv-explorer-windows
           path: dist
 
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: csv-explorer-macos-dmg
+          path: dist
+
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/csv-explorer.exe
+          files: |
+            dist/csv-explorer.exe
+            dist/*.dmg
