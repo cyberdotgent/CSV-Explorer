@@ -471,6 +471,15 @@ private:
         m_headerEditor->SelectAll();
     }
 
+    void FocusFirstDataCellForEntry() {
+        if (!m_grid || m_grid->GetNumberCols() <= 0 || m_grid->GetNumberRows() <= 0) {
+            return;
+        }
+
+        SelectCell(0, 0);
+        m_grid->EnableCellEditControl();
+    }
+
     void CommitHeaderEdit() {
         if (!m_headerEditor || m_activeHeaderColumn < 0) {
             return;
@@ -1129,7 +1138,7 @@ private:
 
     void OnHeaderEditorEnter(wxCommandEvent&) {
         CommitHeaderEdit();
-        m_grid->SetFocus();
+        FocusFirstDataCellForEntry();
     }
 
     void OnHeaderEditorKillFocus(wxFocusEvent& event) {
@@ -1141,6 +1150,30 @@ private:
         if (event.GetKeyCode() == WXK_ESCAPE) {
             CancelHeaderEdit();
             m_grid->SetFocus();
+            return;
+        }
+
+        if (event.GetKeyCode() == WXK_TAB) {
+            const int currentColumn = m_activeHeaderColumn;
+            CommitHeaderEdit();
+
+            if (currentColumn < 0) {
+                m_grid->SetFocus();
+                return;
+            }
+
+            if (event.ShiftDown()) {
+                const int previousColumn = std::max(0, currentColumn - 1);
+                BeginHeaderEdit(previousColumn);
+                return;
+            }
+
+            if (currentColumn >= static_cast<int>(GetColumnCount()) - 1) {
+                InsertColumn(currentColumn + 1);
+                return;
+            }
+
+            BeginHeaderEdit(currentColumn + 1);
             return;
         }
 
