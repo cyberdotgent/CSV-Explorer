@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(CSVExplorer VERSION 0.4.0 LANGUAGES CXX)
+project(CSVExplorer VERSION 0.4.0 LANGUAGES C CXX)
 
 if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build universal macOS binaries" FORCE)
@@ -14,6 +14,8 @@ set(CSV_EXPLORER_REPOSITORY_URL "https://github.com/cyberdotgent/CSV-Explorer")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(FetchContent)
 
 find_package(Git QUIET)
 set(CSV_EXPLORER_GIT_COMMIT_SHORT "unknown")
@@ -72,6 +74,7 @@ add_executable(csv_explorer
     src/main.cpp
     src/main_frame.cpp
     src/print_support.cpp
+    src/sqlite_import_dialog.cpp
     src/unsaved_changes_dialog.cpp
 )
 
@@ -92,6 +95,40 @@ target_include_directories(csv_explorer
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+set(SQLITE_AMALGAMATION_VERSION 3510300)
+set(SQLITE_VERSION 3.51.3)
+set(SQLITE_DOWNLOAD_YEAR 2026)
+FetchContent_Declare(
+    sqlite
+    URL https://sqlite.org/${SQLITE_DOWNLOAD_YEAR}/sqlite-amalgamation-${SQLITE_AMALGAMATION_VERSION}.zip
+)
+FetchContent_GetProperties(sqlite)
+if(NOT sqlite_POPULATED)
+    cmake_policy(PUSH)
+    if(POLICY CMP0169)
+        cmake_policy(SET CMP0169 OLD)
+    endif()
+    FetchContent_Populate(sqlite)
+    cmake_policy(POP)
+endif()
+
+add_library(sqlite3 STATIC
+    ${sqlite_SOURCE_DIR}/sqlite3.c
+)
+add_library(SQLite::SQLite3 ALIAS sqlite3)
+set_target_properties(sqlite3 PROPERTIES
+    OUTPUT_NAME sqlite3
+)
+target_include_directories(sqlite3
+    PUBLIC
+    ${sqlite_SOURCE_DIR}
+)
+target_compile_definitions(sqlite3
+    PRIVATE
+    SQLITE_OMIT_LOAD_EXTENSION
+)
+target_link_libraries(csv_explorer PRIVATE SQLite::SQLite3)
+
 set(CSV_EXPLORER_MINGW_CROSS FALSE)
 if(CMAKE_CROSSCOMPILING
     AND CMAKE_SYSTEM_NAME STREQUAL "Windows"
@@ -100,8 +137,6 @@ if(CMAKE_CROSSCOMPILING
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR APPLE)
-    include(FetchContent)
-
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
         set(CMAKE_POLICY_VERSION_MINIMUM "3.5")
     endif()

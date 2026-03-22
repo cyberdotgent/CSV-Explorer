@@ -20,6 +20,7 @@
 #include "go_to_row_dialog.h"
 #include "main_frame.h"
 #include "print_support.h"
+#include "sqlite_import_dialog.h"
 #include "unsaved_changes_dialog.h"
 
 namespace {
@@ -33,6 +34,8 @@ enum {
     ID_GO_TO_FIRST,
     ID_GO_TO_LAST,
     ID_GO_TO_ROW,
+    ID_IMPORT_SQLITE,
+    ID_EXPORT_SQLITE,
     ID_CONTEXT_COPY_ROW,
     ID_CONTEXT_COPY_CELL,
     ID_INSERT_ROW_BEFORE,
@@ -179,6 +182,7 @@ private:
     bool ConfirmCloseAllPages();
     bool ClosePage(EditorPage* page);
     EditorPage* CreateBlankTab(bool activate, bool startEditingHeader);
+    bool ImportTableInPreferredPage(EditorPage* preferredPage, const ImportedSqliteTable& importedTable);
     bool OpenPathInPreferredPage(EditorPage* preferredPage, const wxString& path);
 
     void OnNewWindow(wxCommandEvent&);
@@ -186,6 +190,8 @@ private:
     void OnCloseWindow(wxCommandEvent&);
     void OnCloseTab(wxCommandEvent&);
     void OnOpen(wxCommandEvent&);
+    void OnImportFromSqlite(wxCommandEvent&);
+    void OnExportToSqlite(wxCommandEvent&);
     void OnSave(wxCommandEvent&);
     void OnSaveAs(wxCommandEvent&);
     void OnPrintPreview(wxCommandEvent&);
@@ -220,6 +226,7 @@ public:
     bool SaveCurrentFileAs();
     bool ConfirmClose();
     void CreateBlankDocument(bool startEditingHeader);
+    void LoadImportedTable(const ImportedSqliteTable& importedTable);
     bool IsEffectivelyEmptyDocument() const;
     bool IsDirty() const {
         return m_isDirty;
@@ -381,6 +388,12 @@ void MainFrame::BuildMenuBar() {
     auto* fileMenu = new wxMenu();
     fileMenu->Append(wxID_NEW, "&New...\tCtrl+N");
     fileMenu->Append(wxID_OPEN, "&Open...\tCtrl+O");
+    auto* importMenu = new wxMenu();
+    importMenu->Append(ID_IMPORT_SQLITE, "From &SQLite Database...");
+    fileMenu->AppendSubMenu(importMenu, "&Import");
+    auto* exportMenu = new wxMenu();
+    exportMenu->Append(ID_EXPORT_SQLITE, "To S&QLite Database...");
+    fileMenu->AppendSubMenu(exportMenu, "E&xport");
     fileMenu->AppendSeparator();
     fileMenu->Append(wxID_SAVE, "&Save\tCtrl+S");
     fileMenu->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
@@ -485,6 +498,8 @@ void MainFrame::BuildNotebook() {
     Bind(wxEVT_MENU, &MainFrame::OnCloseWindow, this, ID_CLOSE_WINDOW);
     Bind(wxEVT_MENU, &MainFrame::OnCloseTab, this, ID_CLOSE_TAB);
     Bind(wxEVT_MENU, &MainFrame::OnOpen, this, wxID_OPEN);
+    Bind(wxEVT_MENU, &MainFrame::OnImportFromSqlite, this, ID_IMPORT_SQLITE);
+    Bind(wxEVT_MENU, &MainFrame::OnExportToSqlite, this, ID_EXPORT_SQLITE);
     Bind(wxEVT_MENU, &MainFrame::OnSave, this, wxID_SAVE);
     Bind(wxEVT_MENU, &MainFrame::OnSaveAs, this, wxID_SAVEAS);
     Bind(wxEVT_MENU, &MainFrame::OnPrintPreview, this, wxID_PREVIEW);
@@ -607,6 +622,29 @@ bool MainFrame::OpenPathInPreferredPage(EditorPage* preferredPage, const wxStrin
     return true;
 }
 
+bool MainFrame::ImportTableInPreferredPage(EditorPage* preferredPage, const ImportedSqliteTable& importedTable) {
+    if (preferredPage && preferredPage->IsEffectivelyEmptyDocument()) {
+        const int pageIndex = m_notebook ? m_notebook->FindPage(preferredPage) : wxNOT_FOUND;
+        if (m_notebook && pageIndex != wxNOT_FOUND) {
+            m_notebook->SetSelection(static_cast<size_t>(pageIndex));
+        }
+        preferredPage->LoadImportedTable(importedTable);
+        return true;
+    }
+
+    MainFrame* frame = CreateAndShowMainFrame({});
+    if (!frame) {
+        return false;
+    }
+
+    if (EditorPage* page = frame->GetActivePage()) {
+        page->LoadImportedTable(importedTable);
+        return true;
+    }
+
+    return false;
+}
+
 bool MainFrame::OpenDocumentPath(const wxString& path) {
     return OpenPathInPreferredPage(GetActivePage(), path);
 }
@@ -701,6 +739,30 @@ void MainFrame::OnOpen(wxCommandEvent&) {
     if (dialog.ShowModal() == wxID_OK) {
         OpenDocumentPath(dialog.GetPath());
     }
+}
+
+void MainFrame::OnImportFromSqlite(wxCommandEvent&) {
+    ImportedSqliteTable importedTable;
+    if (!ShowSqliteImportDialog(this, &importedTable)) {
+        return;
+    }
+
+    ImportTableInPreferredPage(GetActivePage(), importedTable);
+}
+
+void MainFrame::OnExportToSqlite(wxCommandEvent&) {
+    EditorPage* page = GetActivePage();
+    if (!page) {
+        return;
+    }
+
+    PrintableDocument document = page->BuildPrintableDocument();
+    ImportedSqliteTable exportedTable;
+    exportedTable.documentName = document.title;
+    exportedTable.headers = document.headers;
+    exportedTable.rows = document.rows;
+
+    ShowSqliteExportDialog(this, exportedTable);
 }
 
 void MainFrame::OnSave(wxCommandEvent&) {
@@ -1286,6 +1348,32 @@ void EditorPage::CreateBlankDocument(bool startEditingHeader) {
 
     if (startEditingHeader && m_grid->GetNumberCols() > 0) {
         BeginHeaderEdit(0);
+    }
+}
+
+void EditorPage::LoadImportedTable(const ImportedSqliteTable& importedTable) {
+    CancelHeaderEdit();
+    CommitActiveEdit();
+
+    m_headers = importedTable.headers;
+    m_rows = importedTable.rows;
+    NormalizeRows(static_cast<unsigned int>(m_headers.size()));
+    RefreshGridFromData();
+    m_grid->ClearSelection();
+
+    m_currentFile.clear();
+    m_documentName = importedTable.documentName.IsEmpty() ? "untitled.csv" : importedTable.documentName;
+    m_lastFindValid = false;
+    m_lastFindIndex = 0;
+    m_contextRow = -1;
+    m_contextColumn = -1;
+    m_isDirty = true;
+    NotifyStateChanged();
+
+    if (m_grid->GetNumberRows() > 0 && m_grid->GetNumberCols() > 0) {
+        SelectCell(0, 0);
+    } else {
+        FocusEditor();
     }
 }
 
