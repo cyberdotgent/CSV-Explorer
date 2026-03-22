@@ -6,6 +6,7 @@ class CsvExplorerApp : public wxApp {
 public:
     bool OnInit() override {
         wxInitAllImageHandlers();
+        SetExitOnFrameDelete(false);
 
         auto* frame = CreateMainFrame(argc > 1 ? wxString(argv[1]) : wxString());
         SetTopWindow(frame);

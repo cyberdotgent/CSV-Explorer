@@ -191,6 +191,7 @@ private:
     void OnFindPrevious(wxCommandEvent&);
     void OnAbout(wxCommandEvent&);
     void OnNotebookPageChanged(wxBookCtrlEvent&);
+    void OnActivate(wxActivateEvent&);
     void OnClose(wxCloseEvent&);
 
     wxNotebook* m_notebook{nullptr};
@@ -331,6 +332,16 @@ static MainFrame* CreateAndShowMainFrame(const wxString& initialFile) {
     return frame;
 }
 
+static MainFrame* FindOtherMainFrame(const MainFrame* current) {
+    for (wxWindowList::compatibility_iterator node = wxTopLevelWindows.GetFirst(); node; node = node->GetNext()) {
+        auto* frame = dynamic_cast<MainFrame*>(node->GetData());
+        if (frame && frame != current) {
+            return frame;
+        }
+    }
+    return nullptr;
+}
+
 MainFrame::MainFrame(const wxString& initialFile)
     : wxFrame(nullptr, wxID_ANY, CSV_EXPLORER_NAME, wxDefaultPosition, wxSize(900, 600)) {
     SetDropTarget(new FrameFileDropTarget(*this));
@@ -448,6 +459,7 @@ void MainFrame::BuildNotebook() {
     Bind(wxEVT_MENU, &MainFrame::OnFindPrevious, this, ID_FIND_PREVIOUS);
     Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, &MainFrame::OnNotebookPageChanged, this);
+    Bind(wxEVT_ACTIVATE, &MainFrame::OnActivate, this);
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnClose, this);
 }
 
@@ -688,13 +700,34 @@ void MainFrame::OnNotebookPageChanged(wxBookCtrlEvent& event) {
     event.Skip();
 }
 
+void MainFrame::OnActivate(wxActivateEvent& event) {
+    if (event.GetActive() && wxTheApp) {
+        wxTheApp->SetTopWindow(this);
+    }
+    event.Skip();
+}
+
 void MainFrame::OnClose(wxCloseEvent& event) {
     if (!ConfirmCloseAllPages()) {
         event.Veto();
         return;
     }
 
+    MainFrame* otherFrame = FindOtherMainFrame(this);
+    if (wxTheApp && wxTheApp->GetTopWindow() == this) {
+        wxTheApp->SetTopWindow(otherFrame);
+    }
+
     event.Skip();
+
+    if (!otherFrame && wxTheApp) {
+        wxTheApp->CallAfter([]
+        {
+            if (wxTheApp) {
+                wxTheApp->ExitMainLoop();
+            }
+        });
+    }
 }
 
 EditorPage::EditorPage(MainFrame& owner, wxWindow* parent)
